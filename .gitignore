@@ -17,4 +17,4 @@ nbproject
 *.swp
 *.pid
 *.log
-
+build/

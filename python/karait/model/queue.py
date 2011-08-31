@@ -28,6 +28,7 @@ class Queue(object):
             self.host,
             self.port
         )
+        self.queue_collection = self.connection[self.database][self.queue]
         self._create_capped_collection()
         
     def _create_capped_collection(self):
@@ -40,11 +41,14 @@ class Queue(object):
                 max = self.queue_size,
                 create = True
             )
+             
+            self.queue_collection.create_index('_meta.routing_key')
+             
         except pymongo.errors.OperationFailure, operation_failure:
             if not self.ALREADY_EXISTS_EXCEPTION_STRING in str(operation_failure):
                 raise operation_failure
     
-    def write(self, message):
+    def write(self, message, routing_key=None):
         if type(message) == dict:
             message_dict = message
         else:
@@ -53,13 +57,22 @@ class Queue(object):
         message_dict['_meta'] = {}
         message_dict['_meta']['timestamp'] = time.time()
         message_dict['_meta']['expiry'] = -1.0
+        
+        if routing_key:
+            message_dict['_meta']['routing_key'] = routing_key
                 
-        self.connection[self.database][self.queue].insert(message_dict)
+        self.queue_collection.insert(message_dict)
     
-    def read(self, routing_key=None):
+    def read(self, routing_key=None, message_limit=10):
         messages = []
-        for raw_message in self.connection[self.database][self.queue].find():
+        
+        conditions = {}
+        
+        if routing_key:
+            conditions['_meta.routing_key'] = routing_key
+        
+        for raw_message in self.queue_collection.find(conditions).limit(message_limit):
             messages.append(
-                Message(dictionary=raw_message, queue=self)
+                Message(dictionary=raw_message, queue_collection=self.queue_collection)
             )
         return messages

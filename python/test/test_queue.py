@@ -64,7 +64,7 @@ class TestQueue(unittest.TestCase):
             queue='queue_test'
         )
         
-        message = Message(queue=queue)
+        message = Message()
         message.apple = 5
         message.banana = 6
         message.inner_object = {
@@ -86,7 +86,7 @@ class TestQueue(unittest.TestCase):
             queue='queue_test'
         )
         
-        write_message = Message(queue=queue)
+        write_message = Message()
         write_message.apple = 5
         write_message.banana = 6
         write_message.inner_object = {
@@ -112,3 +112,14 @@ class TestQueue(unittest.TestCase):
         self.assertEqual(1, messages[0].foo)
         self.assertEqual(2, messages[1].foo)
         self.assertEqual(3, messages[2].foo)
+    
+    def test_routing_key_can_optionally_be_used_to_return_only_select_messages(self):
+        queue = Queue(
+            database='karait_test',
+            queue='queue_test'
+        )
+        queue.write(Message({'foo': 1}), routing_key='foobar')
+        queue.write(Message({'foo': 2}))
+        messages = queue.read(routing_key='foobar')
+        self.assertEqual(1, len(messages))
+        self.assertEqual(1, messages[0].foo)

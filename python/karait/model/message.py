@@ -5,11 +5,11 @@ class Message(object):
         '_id',
         '_source',
         '_expired',
-        '_queue'
+        '_queue_collection'
     ]
     
-    def __init__(self, dictionary={}, queue=None):
-        self._queue = queue
+    def __init__(self, dictionary={}, queue_collection=None):
+        self._queue_collection = queue_collection
         self._expired = False
         self._source = dictionary
         self._from_dictionary(dictionary)

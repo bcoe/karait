@@ -164,3 +164,17 @@ class TestQueue(unittest.TestCase):
         time.sleep(0.2)
         self.assertEqual(0, len(queue.read()))
         self.assertEqual(0, len(queue.read()))
+        
+    def test_delete_messages_removes_whole_set_of_messages(self):
+        queue = Queue(
+            database='karait_test',
+            queue='queue_test'
+        )
+        queue.write(Message({'foo': 1}))
+        queue.write(Message({'foo': 2}))
+        queue.write(Message({'foo': 3}))
+        messages = queue.read()
+        self.assertEqual(3, len(messages))
+        queue.delete_messages(messages)
+        messages = queue.read()
+        self.assertEqual(0, len(messages))

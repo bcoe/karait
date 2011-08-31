@@ -5,7 +5,7 @@ module Karait
     
     include Karait
     
-    MESSAGE_LIMIT = 10
+    MESSAGES_READ = 10
     
     def initialize(opts={})
       set_instance_variables opts
@@ -45,7 +45,7 @@ module Karait
         }
       end
       
-      @queue_collection.find(conditions).limit(opts.fetch(:message_limit, Queue::MESSAGE_LIMIT)).each do |raw_message|
+      @queue_collection.find(conditions).limit(opts.fetch(:messages_read, Queue::MESSAGES_READ)).each do |raw_message|
         message = Karait::Message.new(raw_message=raw_message, queue_collection=@queue_collection)
         if message.expired?
           message.delete()
@@ -71,7 +71,8 @@ module Karait
                   '_meta.expired' => true
               }
           },
-          :multi => true
+          :multi => true,
+          :safe => true
       )
     end
     

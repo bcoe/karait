@@ -13,5 +13,7 @@ setup(
     install_requires = [
         'pymongo'
     ],
-    tests_require=['nose']
+    tests_require=[
+        'nose'
+    ]
 )

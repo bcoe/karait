@@ -1,10 +1,40 @@
 import unittest
 from karait import Queue
+from pymongo import Connection
 
 class TestQueue(unittest.TestCase):
     
     def setUp(self):
-        pass
-    
-    def test_fake(self):
-        self.assertTrue(True)
+        Connection().karait_test.queue_test.drop()
+        
+    def test_queue_initializes_capped_collection_for_queue_if_collection_does_not_exist(self):
+        queue = Queue(
+            database='karait_test',
+            queue='queue_test',
+            average_message_size=8192,
+            queue_size=4096
+        )
+        collection = Connection().karait_test.queue_test
+        options = collection.options()
+        self.assertEqual(1, options['capped'])
+        self.assertEqual(4096, options['max'])
+        self.assertEqual( (8192 * 4096) , options['size'])
+        
+    def test_queue_object_can_attach_to_a_collection_that_already_exists(self):
+        collection = Connection().karait_test.queue_test
+        collection.insert({
+            'routing_key': 'foobar',
+            'message': {
+                'apple': 3,
+                'banana': 5
+            },
+            'timestamp': 2523939,
+            'expiry': 20393
+        })
+        queue = Queue(
+            database='karait_test',
+            queue='queue_test',
+            average_message_size=8192,
+            queue_size=4096
+        )
+        self.assertEqual(1, collection.find({}).count())

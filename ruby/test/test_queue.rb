@@ -186,9 +186,22 @@ class TestQueue < Test::Unit::TestCase
       :queue => 'queue_test'
     )
     
-    queue.write(Karait::Message.new({:foo => 1}), :expire => 0.1)
+    queue.write(Karait::Message.new({:foo => 1}), :expire => 0.5)
+    sleep(0.1)
     messages = queue.read()
     assert_equal 1, messages.count
+  end
+  
+  should "remove message once expire time is passed" do
+    queue = Karait::Queue.new(
+      :database => 'karait_test',
+      :queue => 'queue_test'
+    )
+    
+    queue.write(Karait::Message.new({:foo => 1}), :expire => 0.1)
+    sleep(0.2)
+    messages = queue.read()
+    assert_equal 0, messages.count
   end
   
 end

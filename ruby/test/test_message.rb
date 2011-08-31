@@ -47,7 +47,7 @@ class TestMessage < Test::Unit::TestCase
     assert_equal 4, hash.keys.count
   end
   
-  should "not copy blacklisted keys onto message object" do
+  should "not copy blacklisted keys when to_hash called" do
       raw_message = {
           '_id' => 'foobar',
           '_meta' => {
@@ -77,6 +77,38 @@ class TestMessage < Test::Unit::TestCase
       message = Karait::Message.new(raw_message=raw_message, queue_collection=collection)
       message.delete()
       assert_equal 0, collection.find({'_meta.expired' => false}).count
+  end
+
+  should "set expired to true if current time minus timestamp is greater than expire" do
+    raw_message = {
+        'routing_key' => 'foobar',
+        'apple' => 3,
+        'banana' => 5,
+        '_meta' => {
+            'timestamp' => 0,
+            'expire' => 10,
+            'expired' => false
+        }
+    }
+
+    message = Karait::Message.new(raw_message=raw_message)
+    assert_equal true, message.expired
+  end
+  
+  should "not set expired to true if expire is -1.0" do
+    raw_message = {
+        'routing_key' => 'foobar',
+        'apple' => 3,
+        'banana' => 5,
+        '_meta' => {
+            'timestamp' => 0,
+            'expire' => -1.0,
+            'expired' => false
+        }
+    }
+    
+    message = Karait::Message.new(raw_message=raw_message)
+    assert_equal false, message.expired
   end
   
 end

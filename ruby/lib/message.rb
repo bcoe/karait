@@ -3,6 +3,8 @@ module Karait
     
     include Karait
     
+    attr_accessor :expired
+    
     VARIABLE_REGEX = /^([a-z_][a-zA-Z_0-9]*)=$/
     BLACKLIST = {
         '_meta' => true,
@@ -14,6 +16,7 @@ module Karait
       @source = raw_message
       @queue_collection = queue_collection
       @variables_to_serialize = {}
+      set_expired
       add_accessors raw_message
     end
     
@@ -39,6 +42,19 @@ module Karait
     end
     
     private
+    
+    def set_expired
+      self.expired = false
+      
+      current_time = Time.now().to_f
+      meta = @source.fetch('_meta', {})
+      
+      return if meta.fetch('expire', -1.0) == -1.0
+      
+      if current_time - meta.fetch('timestamp', 0.0) > meta.fetch('expire', -1.0):
+        self.expired = true
+      end
+    end
     
     def add_accessors(hash)
       hash.each do |k, v|

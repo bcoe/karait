@@ -145,7 +145,16 @@ class TestQueue(unittest.TestCase):
         self.assertEqual(1, collection.find({}).count())
         queue.read()[0].delete()
         self.assertEqual(0, len(queue.read()))
-        
+    
+    def test_message_with_expire_set_does_not_immediately_expre(self):
+        queue = Queue(
+            database='karait_test',
+            queue='queue_test'
+        )
+        queue.write(Message({'foo': 1}), expire=0.1)
+        self.assertEqual(1, len(queue.read()))
+        self.assertEqual(1, len(queue.read()))
+    
     def test_expired_messages_not_returned_by_read(self):
         queue = Queue(
             database='karait_test',

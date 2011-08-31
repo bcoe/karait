@@ -23,12 +23,13 @@ class Message(object):
                 self.__dict__[key] = value
                 
     def _check_if_expired(self):
-        expire = self._source.get('_meta', {}).get('expire', -1.0)
+        meta = self._source.get('_meta', {})
+        expire = meta.get('expire', -1.0)
         
         if expire == -1.0:
             return
         
-        if ( time.time() - self._source.get('timestamp', 0.0) ) > expire:
+        if ( time.time() - meta.get('timestamp', 0.0) ) > expire:
             self._expired = True
         
     def to_dictionary(self):

@@ -1,5 +1,6 @@
 import time
 import pymongo
+from karait.model.message import Message
 
 class Queue(object):
     
@@ -46,9 +47,19 @@ class Queue(object):
     def write(self, message):
         if type(message) == dict:
             message_dict = message
+        else:
+            message_dict = message.to_dictionary()
             
         message_dict['_meta'] = {}
         message_dict['_meta']['timestamp'] = time.time()
         message_dict['_meta']['expiry'] = -1.0
-        
-        self.connection[self.database][self.queue].insert(message)
+                
+        self.connection[self.database][self.queue].insert(message_dict)
+    
+    def read(self, routing_key=None):
+        messages = []
+        for raw_message in self.connection[self.database][self.queue].find():
+            messages.append(
+                Message(dictionary=raw_message, queue=self)
+            )
+        return messages

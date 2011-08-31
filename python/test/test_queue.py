@@ -1,5 +1,5 @@
 import unittest
-from karait import Queue
+from karait import Queue, Message
 from pymongo import Connection
 
 class TestQueue(unittest.TestCase):
@@ -57,3 +57,58 @@ class TestQueue(unittest.TestCase):
         self.assertEqual(2, obj['inner_object']['bar'])
         self.assertTrue(obj['_meta']['expiry'])
         self.assertTrue(obj['_meta']['timestamp'])
+        
+    def test_writing_a_message_to_the_queue_populates_it_within_mongodb(self):
+        queue = Queue(
+            database='karait_test',
+            queue='queue_test'
+        )
+        
+        message = Message(queue=queue)
+        message.apple = 5
+        message.banana = 6
+        message.inner_object = {
+            'foo': 1,
+            'bar': 2
+        }
+        queue.write(message)
+
+        collection = Connection().karait_test.queue_test
+        obj = collection.find_one({})
+        self.assertEqual(6, obj['banana'])
+        self.assertEqual(2, obj['inner_object']['bar'])
+        self.assertTrue(obj['_meta']['expiry'])
+        self.assertTrue(obj['_meta']['timestamp'])
+        
+    def test_reading_from_the_queue_returns_a_message_object(self):
+        queue = Queue(
+            database='karait_test',
+            queue='queue_test'
+        )
+        
+        write_message = Message(queue=queue)
+        write_message.apple = 5
+        write_message.banana = 6
+        write_message.inner_object = {
+            'foo': 1,
+            'bar': 2
+        }
+        queue.write(write_message)
+        
+        read_message = queue.read()[0]
+        self.assertEqual(5, read_message.apple)
+        self.assertEqual(2, read_message.inner_object['bar'])
+        self.assertEqual(3, len(read_message.to_dictionary().keys()))
+        
+    def test_messages_returned_in_lifo_order(self):
+        queue = Queue(
+            database='karait_test',
+            queue='queue_test'
+        )
+        queue.write(Message({'foo': 1}))
+        queue.write(Message({'foo': 2}))
+        queue.write(Message({'foo': 3}))
+        messages = queue.read()
+        self.assertEqual(1, messages[0].foo)
+        self.assertEqual(2, messages[1].foo)
+        self.assertEqual(3, messages[2].foo)

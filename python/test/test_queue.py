@@ -55,5 +55,5 @@ class TestQueue(unittest.TestCase):
         obj = collection.find_one({})
         self.assertEqual(6, obj['banana'])
         self.assertEqual(2, obj['inner_object']['bar'])
-        self.assertTrue(obj['expiry'])
-        self.assertTrue(obj['timestamp'])
+        self.assertTrue(obj['_meta']['expiry'])
+        self.assertTrue(obj['_meta']['timestamp'])

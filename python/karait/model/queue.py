@@ -47,7 +47,8 @@ class Queue(object):
         if type(message) == dict:
             message_dict = message
             
-        message_dict['timestamp'] = time.time()
-        message_dict['expiry'] = -1.0
+        message_dict['_meta'] = {}
+        message_dict['_meta']['timestamp'] = time.time()
+        message_dict['_meta']['expiry'] = -1.0
         
         self.connection[self.database][self.queue].insert(message)

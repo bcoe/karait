@@ -33,8 +33,27 @@ class TestQueue(unittest.TestCase):
         })
         queue = Queue(
             database='karait_test',
-            queue='queue_test',
-            average_message_size=8192,
-            queue_size=4096
+            queue='queue_test'
         )
         self.assertEqual(1, collection.find({}).count())
+        
+    def test_writing_a_dictionary_to_the_queue_populates_it_within_mongodb(self):
+        queue = Queue(
+            database='karait_test',
+            queue='queue_test'
+        )
+        queue.write({
+            'apple': 5,
+            'banana': 6,
+            'inner_object': {
+                'foo': 1,
+                'bar': 2
+            }
+        })
+
+        collection = Connection().karait_test.queue_test
+        obj = collection.find_one({})
+        self.assertEqual(6, obj['banana'])
+        self.assertEqual(2, obj['inner_object']['bar'])
+        self.assertTrue(obj['expiry'])
+        self.assertTrue(obj['timestamp'])

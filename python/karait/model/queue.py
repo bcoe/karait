@@ -1,3 +1,4 @@
+import time
 import pymongo
 
 class Queue(object):
@@ -41,3 +42,12 @@ class Queue(object):
         except pymongo.errors.OperationFailure, operation_failure:
             if not self.ALREADY_EXISTS_EXCEPTION_STRING in str(operation_failure):
                 raise operation_failure
+    
+    def write(self, message):
+        if type(message) == dict:
+            message_dict = message
+            
+        message_dict['timestamp'] = time.time()
+        message_dict['expiry'] = -1.0
+        
+        self.connection[self.database][self.queue].insert(message)

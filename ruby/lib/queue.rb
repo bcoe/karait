@@ -11,7 +11,7 @@ module Karait
     end
     
     def write(message, routing_key=nil, expire=-1.0)
-      if message.type == Hash
+      if message.class == Hash
         message_dict = message
       else
         message_dict = message.to_hash
@@ -22,6 +22,8 @@ module Karait
         :timestamp => Time.now().to_f,
         :expired => false
       }
+      
+      message_dict[:_meta][:routing_key] = routing_key if routing_key
       
       @queue_collection.insert(message_dict, :safe => true)
     end

@@ -34,15 +34,15 @@ class TestQueue < Test::Unit::TestCase
   should "attach to a mongo queue collection that already exists" do
     collection = Mongo::Connection.new()['karait_test']['queue_test']
     collection.insert({
-            :message => {
-                :apple => 3,
-                :banana => 5
-            },
-            :_meta => {
-              :timestamp => 2523939,
-              :expire => 20393,
-              :routing_key => 'foo_key'
-            }
+      :message => {
+        :apple => 3,
+        :banana => 5
+      },
+      :_meta => {
+        :timestamp => 2523939,
+        :expire => 20393,
+        :routing_key => 'foo_key'
+      }
     })
     assert_equal 1, collection.count()
     
@@ -65,12 +65,12 @@ class TestQueue < Test::Unit::TestCase
     )
     
     queue.write({
-        :apple => 5,
-        :banana => 6,
-        :inner_object => {
-            :foo => 1,
-            :bar => 2
-        }
+      :apple => 5,
+      :banana => 6,
+      :inner_object => {
+        :foo => 1,
+        :bar => 2
+      }
     })
 
     collection = Mongo::Connection.new()['karait_test']['queue_test']
@@ -109,8 +109,8 @@ class TestQueue < Test::Unit::TestCase
     write_message.apple = 5
     write_message.banana = 6
     write_message.inner_object = {
-        'foo' => 1,
-        'bar' => 2
+      'foo' => 1,
+      'bar' => 2
     }
     queue.write write_message
   
@@ -118,6 +118,36 @@ class TestQueue < Test::Unit::TestCase
     assert_equal 5, read_message.apple
     assert_equal 2, read_message.inner_object['bar']
     assert_equal 3, read_message.to_hash.keys.count
+  end
+  
+  should "return messages in lifo order" do
+    queue = Karait::Queue.new(
+      :database => 'karait_test',
+      :queue => 'queue_test'
+    )
+    
+    queue.write Karait::Message.new({'foo' => 1})
+    queue.write Karait::Message.new({:foo => 2})
+    queue.write Karait::Message.new({'foo' => 3})
+    messages = queue.read()
+    
+    assert_equal 1, messages[0].foo
+    assert_equal 2, messages[1].foo
+    assert_equal 3, messages[2].foo
+  end
+  
+  should "only return messages with the appropriate routing key when it's provided" do
+    queue = Karait::Queue.new(
+      :database => 'karait_test',
+      :queue => 'queue_test'
+    )
+    
+    queue.write(Karait::Message.new({:foo => 1}), routing_key='foobar')
+    queue.write Karait::Message.new({:foo => 2})
+
+    messages = queue.read(routing_key='foobar')
+    assert_equal 1, messages.count
+    assert_equal 1, messages[0].foo
   end
   
 end

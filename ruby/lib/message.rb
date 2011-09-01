@@ -3,8 +3,6 @@ module Karait
     
     include Karait
     
-    attr_accessor :expired
-    
     VARIABLE_REGEX = /^([a-z_][a-zA-Z_0-9]*)=$/
     BLACKLIST = {
         '_meta' => true,
@@ -41,10 +39,14 @@ module Karait
       )
     end
     
+    def expired?
+      return @expired
+    end
+    
     private
     
     def set_expired
-      self.expired = false
+      @expired = false
       
       current_time = Time.now().to_f
       meta = @source.fetch('_meta', {})
@@ -52,7 +54,7 @@ module Karait
       return if meta.fetch('expire', -1.0) == -1.0
       
       if current_time - meta.fetch('timestamp', 0.0) > meta.fetch('expire', -1.0):
-        self.expired = true
+        @expired = true
       end
     end
     

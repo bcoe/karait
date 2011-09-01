@@ -13,14 +13,44 @@ module Karait
     def write(message, routing_key=nil, expire=-1.0)
       if message.type == Hash
         message_dict = message
+      else
+        message_dict = message.to_hash
       end
       
       message_dict[:_meta] = {
         :expire => expire,
-        :timestamp => Time.now().to_f
+        :timestamp => Time.now().to_f,
+        :expired => false
       }
       
       @queue_collection.insert(message_dict, :safe => true)
+    end
+    
+    def read(routing_key=nil, message_limit=10)
+      messages = []
+      
+      conditions = {
+          '_meta.expired' => false
+      }
+      
+      if routing_key
+        conditions['_meta.routing_key'] = routing_key
+      else
+        conditions['_meta.routing_key'] = {
+          '$exists' => false
+        }
+      end
+      
+      @queue_collection.find(conditions).limit(message_limit).each do |raw_message|
+        message = Karait::Message.new(raw_message=raw_message, queue_collection=@queue_collection)
+        if message.expired?
+          message.delete()
+        else
+          messages << message
+        end
+      end
+      
+      return messages
     end
     
     private
@@ -50,6 +80,7 @@ module Karait
       @database = @connection[self.database]
       create_capped_collection
       @queue_collection = @database[self.queue]
+      @queue_collection.create_index('_meta.routing_key')
     end
     
     def create_capped_collection

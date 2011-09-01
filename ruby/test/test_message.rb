@@ -92,7 +92,7 @@ class TestMessage < Test::Unit::TestCase
     }
 
     message = Karait::Message.new(raw_message=raw_message)
-    assert_equal true, message.expired
+    assert_equal true, message.expired?
   end
   
   should "not set expired to true if expire is -1.0" do
@@ -108,7 +108,7 @@ class TestMessage < Test::Unit::TestCase
     }
     
     message = Karait::Message.new(raw_message=raw_message)
-    assert_equal false, message.expired
+    assert_equal false, message.expired?
   end
   
 end

@@ -152,11 +152,6 @@ print "#{message.name}"
 message.delete
 ```
 
-# or
-
-message = queue.read(:routing_key => 'my_routing_key').first
-print "#{message.action}"
-
 Examples
 --------
 

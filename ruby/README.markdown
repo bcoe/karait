@@ -65,5 +65,5 @@ See unit tests for more documentation.
 Copyright
 ---------
 
-Copyright (c) 2011 bcoe. See LICENSE.txt for
+Copyright (c) 2011 Attachments.me. See LICENSE.txt for
 further details.

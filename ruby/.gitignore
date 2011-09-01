@@ -1,0 +1,13 @@
+html
+pkg
+doc
+*.gem
+nbproject
+*.bundle
+*.o
+*~
+*#*
+*.class
+*.swp
+*.pid
+*.log

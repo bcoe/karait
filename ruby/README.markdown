@@ -48,14 +48,14 @@ _Reading from a queue_
 
 ```ruby
 require 'karait'
-queue = Karait::Queue.new()
-message = queue.read().first()
+queue = Karait::Queue.new
+message = queue.read().first
 print "#{message.name}"
 message.delete
 
 # or
 
-message = queue.read(:routing_key => 'my_routing_key')
+message = queue.read(:routing_key => 'my_routing_key').first
 print "#{message.action}"
 message.delete
 ```

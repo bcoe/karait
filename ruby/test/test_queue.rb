@@ -142,12 +142,53 @@ class TestQueue < Test::Unit::TestCase
       :queue => 'queue_test'
     )
     
-    queue.write(Karait::Message.new({:foo => 1}), routing_key='foobar')
+    queue.write(Karait::Message.new({:foo => 1}), :routing_key => 'foobar')
     queue.write Karait::Message.new({:foo => 2})
 
-    messages = queue.read(routing_key='foobar')
+    messages = queue.read(:routing_key => 'foobar')
     assert_equal 1, messages.count
     assert_equal 1, messages[0].foo
+  end
+  
+  should "only return messages with no routing key when none is provided" do
+    queue = Karait::Queue.new(
+      :database => 'karait_test',
+      :queue => 'queue_test'
+    )
+    
+    queue.write(Karait::Message.new({:foo => 1}), :routing_key => 'foobar')
+    queue.write Karait::Message.new({:foo => 2})
+    
+    messages = queue.read()
+    assert_equal 1, messages.count
+    assert_equal 2, messages[0].foo
+  end
+  
+  should "should no longer return a message when delete is called on it" do
+    queue = Karait::Queue.new(
+      :database => 'karait_test',
+      :queue => 'queue_test'
+    )
+    
+    queue.write Karait::Message.new({:foo => 1})
+    messages = queue.read()
+    assert_equal 1, messages.count
+    assert_equal 1, messages[0].foo
+    
+    messages[0].delete
+    messages = queue.read()
+    assert_equal 0, messages.count
+  end
+
+  should "not remove message immediately with expire set" do
+    queue = Karait::Queue.new(
+      :database => 'karait_test',
+      :queue => 'queue_test'
+    )
+    
+    queue.write(Karait::Message.new({:foo => 1}), :expire => 0.1)
+    messages = queue.read()
+    assert_equal 1, messages.count
   end
   
 end

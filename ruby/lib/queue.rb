@@ -5,12 +5,14 @@ module Karait
     
     include Karait
     
+    MESSAGE_LIMIT = 10
+    
     def initialize(opts={})
       set_instance_variables opts
       create_mongo_connection
     end
     
-    def write(message, routing_key=nil, expire=-1.0)
+    def write(message, opts={})
       if message.class == Hash
         message_dict = message
       else
@@ -18,32 +20,32 @@ module Karait
       end
       
       message_dict[:_meta] = {
-        :expire => expire,
+        :expire => opts.fetch(:expire, -1.0),
         :timestamp => Time.now().to_f,
         :expired => false
       }
       
-      message_dict[:_meta][:routing_key] = routing_key if routing_key
+      message_dict[:_meta][:routing_key] = opts.fetch(:routing_key) if opts[:routing_key]
       
       @queue_collection.insert(message_dict, :safe => true)
     end
     
-    def read(routing_key=nil, message_limit=10)
+    def read(opts={})
       messages = []
       
       conditions = {
           '_meta.expired' => false
       }
       
-      if routing_key
-        conditions['_meta.routing_key'] = routing_key
+      if opts[:routing_key]
+        conditions['_meta.routing_key'] = opts[:routing_key]
       else
         conditions['_meta.routing_key'] = {
           '$exists' => false
         }
       end
       
-      @queue_collection.find(conditions).limit(message_limit).each do |raw_message|
+      @queue_collection.find(conditions).limit(opts.fetch(:message_limit, Queue::MESSAGE_LIMIT)).each do |raw_message|
         message = Karait::Message.new(raw_message=raw_message, queue_collection=@queue_collection)
         if message.expired?
           message.delete()

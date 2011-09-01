@@ -29,7 +29,7 @@ class TestQueue(unittest.TestCase):
                 'banana': 5
             },
             'timestamp': 2523939,
-            'expiry': 20393
+            'expire': 20393
         })
         queue = Queue(
             database='karait_test',
@@ -55,7 +55,7 @@ class TestQueue(unittest.TestCase):
         obj = collection.find_one({})
         self.assertEqual(6, obj['banana'])
         self.assertEqual(2, obj['inner_object']['bar'])
-        self.assertTrue(obj['_meta']['expiry'])
+        self.assertTrue(obj['_meta']['expire'])
         self.assertTrue(obj['_meta']['timestamp'])
         
     def test_writing_a_message_to_the_queue_populates_it_within_mongodb(self):
@@ -77,7 +77,7 @@ class TestQueue(unittest.TestCase):
         obj = collection.find_one({})
         self.assertEqual(6, obj['banana'])
         self.assertEqual(2, obj['inner_object']['bar'])
-        self.assertTrue(obj['_meta']['expiry'])
+        self.assertTrue(obj['_meta']['expire'])
         self.assertTrue(obj['_meta']['timestamp'])
         
     def test_reading_from_the_queue_returns_a_message_object(self):

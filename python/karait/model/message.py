@@ -1,3 +1,5 @@
+import time
+
 class Message(object):
     
     BLACKLIST = [
@@ -13,11 +15,21 @@ class Message(object):
         self._expired = False
         self._source = dictionary
         self._from_dictionary(dictionary)
+        self._check_if_expired()
         
     def _from_dictionary(self, dictionary):
         for key, value in dictionary.items():
             if not key in self.BLACKLIST:
                 self.__dict__[key] = value
+                
+    def _check_if_expired(self):
+        expire = self._source.get('_meta', {}).get('expire', -1.0)
+        
+        if expire == -1.0:
+            return
+        
+        if ( time.time() - self._source.get('timestamp', 0.0) ) > expire:
+            self._expired = True
         
     def to_dictionary(self):
         dictionary = {}
@@ -38,3 +50,6 @@ class Message(object):
                 }
             }
         )
+        
+    def is_expired(self):
+        return self._expired

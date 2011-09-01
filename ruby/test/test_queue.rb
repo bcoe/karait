@@ -226,12 +226,12 @@ class TestQueue < Test::Unit::TestCase
     queue.write Karait::Message.new({'foo' => 1})
     queue.write Karait::Message.new({:foo => 2})
     queue.write Karait::Message.new({'foo' => 3})
-    messages = queue.read(:visibility_timeout => 0.05)
+    messages = queue.read(:visibility_timeout => 0.4)
     assert_equal 3, messages.count
-    messages = queue.read(:visibility_timeout => 0.05)
+    messages = queue.read(:visibility_timeout => 0.4)
     assert_equal 0, messages.count
-    sleep(0.1)
-    messages = queue.read(:visibility_timeout => 0.05)
+    sleep(0.5)
+    messages = queue.read(:visibility_timeout => 0.4)
     assert_equal 3, messages.count
   end
 end

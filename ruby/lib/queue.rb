@@ -6,6 +6,7 @@ module Karait
     include Karait
     
     MESSAGES_READ = 10
+    NO_OBJECT_FOUND_ERROR = 'No matching object found'
     
     def initialize(opts={})
       set_instance_variables opts
@@ -23,8 +24,7 @@ module Karait
         :expire => opts.fetch(:expire, -1.0),
         :timestamp => Time.now().to_f,
         :expired => false,
-        :visibility_timeout => -1.0,
-        :accessed => 0.0
+        :visible_after => -1.0
       }
       
       message_dict[:_meta][:routing_key] = opts.fetch(:routing_key) if opts[:routing_key]
@@ -33,27 +33,72 @@ module Karait
     end
     
     def read(opts={})
+      opts = {
+        :messages_read => 10,
+        :visibility_timeout => -1.0,
+        :routing_key => nil
+      }.update(opts)
+      
+      current_time = Time.new.to_f
       messages = []
       
-      conditions = {
-          '_meta.expired' => false
+      query = {
+          '_meta.expired' => false,
+          '_meta.visible_after' => {
+            '$lt' => current_time
+          }
       }
-      
-      if opts[:routing_key]
-        conditions['_meta.routing_key'] = opts[:routing_key]
+      if opts[:routing_key] != nil
+        query['_meta.routing_key'] = opts[:routing_key]
       else
-        conditions['_meta.routing_key'] = {
+        query['_meta.routing_key'] = {
           '$exists' => false
         }
       end
       
-      get_raw_messages(
-        conditions,
-        opts.fetch(:messages_read, Queue::MESSAGES_READ),
-        opts.fetch(:visibility_timeout, -1.0)
-      ).each do |raw_message|
+      update = false
+      if opts[:visibility_timeout] != -1.0
+        update = {
+            '$set' => {
+              '_meta.visible_after' => current_time + opts[:visibility_timeout]
+            }
+        }
+      end
+      
+      raw_messages = []
+      
+      if update
+        (0..opts[:messages_read]).each do
+          begin
+            
+            raw_message = @queue_collection.find_and_modify(:query => query, :update => update)
+            
+            if raw_message:
+              raw_messages << raw_message
+            else
+              break
+            end
+          
+          rescue Mongo::OperationFailure => operation_failure
+            if not  operation_failure.to_s.match(Queue::NO_OBJECT_FOUND_ERROR)
+              raise operation_failure
+            end
+          end
+          
+        end
+      else
+        @queue_collection.find(query).limit(opts[:messages_read]).each do |raw_message|
+          raw_messages << raw_message
+        end
+      end
+      
+      raw_messages.each do |raw_message|
         message = Karait::Message.new(raw_message=raw_message, queue_collection=@queue_collection)
-        messages << message
+        if message.expired?
+          message.delete()
+        else
+          messages << message
+        end
       end
       
       return messages
@@ -80,37 +125,6 @@ module Karait
     
     private
     
-    def get_raw_messages(conditions, messages_read, visibility_timeout, should_retry=true)
-      if @queue_collection.find(conditions).count() == 0
-        return []
-      end
-      
-      raw_messages = @database.eval(BSON::Code.new(
-        "
-        function() {
-            if (typeof karait_queue_find === 'undefined') {
-                return false;
-            }
-            return karait_queue_find(collection, conditions, limit, visibilityTimeout);
-        }
-        ",
-        {
-          'conditions' => conditions,
-          'limit' => messages_read,
-          'collection' => @queue,
-          'visibilityTimeout' => visibility_timeout
-        })
-      )
-      
-      if raw_messages
-        return raw_messages
-      elsif should_retry
-        generate_and_store_karait_queue_find_helper
-        return get_raw_messages(conditions, messages_read, visibility_timeout, false)
-      end
-      return []
-    end
-    
     def set_instance_variables(opts)
       
       defaults = {
@@ -118,8 +132,8 @@ module Karait
         :port => 27017,
         :database => 'karait',
         :queue => 'messages',
-        :average_message_size => 8192,
-        :queue_size => 4096
+        :average_message_size => 4096,
+        :queue_size => 8192
       }.merge(opts)
       
       @host = defaults[:host]
@@ -141,6 +155,8 @@ module Karait
       @queue_collection = @database[@queue]
       @queue_collection.create_index('_id')
       @queue_collection.create_index('_meta.routing_key')
+      @queue_collection.create_index('_meta.expired')
+      @queue_collection.create_index('_meta.visible_after')
     end
     
     def create_capped_collection
@@ -150,59 +166,6 @@ module Karait
         :capped => true,
         :max => @queue_size
       )
-    end
-    
-    def generate_and_store_karait_queue_find_helper
-      karait_queue_find = BSON::Code.new(
-        "
-        function(collection, conditions, limit, visibilityTimeout) {
-            var results = [];
-            var currentTime = parseFloat(new Date().getTime()) / 1000.0;
-            
-            function hiddenByVisibilityTimeout(result) {
-                if ( (currentTime - result._meta.accessed) < (result._meta.visibility_timeout) ) {
-                    return true;
-                }
-                return false;
-            }
-            
-            function expire(result) {
-                if (result._meta.expire <= 0.0) {
-                    return false;
-                } else if ( (currentTime - result._meta.timestamp) > result._meta.expire ) {
-                    db[collection].update({_id: result._id}, {$set: {'_meta.expired': true}})
-                    return true;
-                }
-            }
-            
-            (function fetchResults() {
-                var cursor = db[collection].find(conditions).limit(limit);
-                var accessedIds = [];
-                cursor.forEach(function(result) {
-                    if (!expire(result) && !hiddenByVisibilityTimeout(result)) {
-                        results.push(result);
-                        accessedIds.push(result._id);
-                    }
-                });
-                if (visibilityTimeout != -1.0) {
-                    db[collection].update({_id: {$in: accessedIds}},
-                        {
-                            $set: {
-                                '_meta.accessed': currentTime,
-                                '_meta.visibility_timeout': visibilityTimeout
-                            }
-                        },
-                        false,
-                        true
-                    );
-                }
-            })();
-        
-            return results;
-        }
-        "
-      )
-      @database['system.js'].save({:_id => 'karait_queue_find', :value => karait_queue_find})
     end
   end
 end

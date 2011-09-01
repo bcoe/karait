@@ -1,6 +1,5 @@
 import time
 import pymongo
-from pymongo.code import Code
 from karait.model.message import Message
 
 class Queue(object):
@@ -41,12 +40,15 @@ class Queue(object):
                 size = (self.average_message_size * self.queue_size),
                 capped = True,
                 max = self.queue_size,
-                create = True
+                create = True,
+                safe = True
             )
              
             self.queue_collection.create_index('_id')
             self.queue_collection.create_index('_meta.routing_key')
-             
+            self.queue_collection.create_index('_meta.expired')
+            self.queue_collection.create_index('_meta.visible_after')
+            
         except pymongo.errors.OperationFailure, operation_failure:
             if not self.ALREADY_EXISTS_EXCEPTION_STRING in str(operation_failure):
                 raise operation_failure
@@ -61,8 +63,7 @@ class Queue(object):
         message_dict['_meta']['expired'] = False
         message_dict['_meta']['timestamp'] = time.time()
         message_dict['_meta']['expire'] = expire
-        message_dict['_meta']['accessed'] = 0.0
-        message_dict['_meta']['visibility_timeout'] = 0.0
+        message_dict['_meta']['visible_after'] = -1.0
         
         if routing_key:
             message_dict['_meta']['routing_key'] = routing_key
@@ -71,67 +72,47 @@ class Queue(object):
     
     def read(self, routing_key=None, messages_read=10, visibility_timeout=-1.0):
         messages = []
-        
-        conditions = {
-            '_meta.expired': False
+        current_time = time.time()
+        query = {
+            '_meta.expired': False,
+            '_meta.visible_after': {
+              '$lt': current_time
+            }
         }
-        
         if routing_key:
-            conditions['_meta.routing_key'] = routing_key
+            query['_meta.routing_key'] = routing_key
         else:
-            conditions['_meta.routing_key'] = {
+            query['_meta.routing_key'] = {
                 '$exists': False
             }
-            
-        try:
-            raw_messages = self._get_raw_messages(
-                conditions=conditions,
-                messages_read=messages_read,
-                visibility_timeout=visibility_timeout
-            )
-            
-            for raw_message in raw_messages:
-                message = Message(dictionary=raw_message, queue_collection=self.queue_collection)
-                messages.append(message)
+        
+        update = {}
+        if visibility_timeout != -1.0:
+            update = {
+                "$set": {
+                    "_meta.visible_after": current_time + visibility_timeout
+                }
+            }
+        
+        raw_messages=[]
+        if update:        
+            for i in range(0, messages_read):
+                raw_message = self.queue_collection.find_and_modify(query=query, update=update)
+                if raw_message:
+                    raw_messages.append(raw_message)
+        else:
+            for raw_message in self.queue_collection.find(query).limit(messages_read):
+                raw_messages.append(raw_message)
                 
-        except pymongo.errors.OperationFailure:
-            return self.read(routing_key, messages_read)
+        for raw_message in raw_messages:
+            message = Message(dictionary=raw_message, queue_collection=self.queue_collection)
+            
+            if message.is_expired():
+                message.delete()
+            else:
+                messages.append(message)
             
         return messages
-    
-    def _get_raw_messages(self, conditions={}, messages_read=10, visibility_timeout=-1.0, retry=True):
-        if not self.queue_collection.find(conditions).count():
-            return []
-        
-        raw_messages = self.queue_database.eval(
-            Code(
-                """
-                function() {
-                    if (typeof karait_queue_find === 'undefined') {
-                        return false;
-                    }
-                    return karait_queue_find(collection, conditions, limit, visibilityTimeout);
-                }
-                """,
-                {
-                    'conditions': conditions,
-                    'limit': messages_read,
-                    'visibilityTimeout': visibility_timeout,
-                    'collection': self.queue
-                }
-            )
-        )
-        if raw_messages:
-            return raw_messages
-        elif not raw_messages and retry:
-            self._generate_and_store_karait_queue_find_helper()
-            return self._get_raw_messages(
-                conditions=conditions,
-                messages_read=messages_read,
-                visibility_timeout=visibility_timeout,
-                retry=False
-            )
-        return []
     
     def delete_messages(self, messages):
         ids = []
@@ -152,53 +133,3 @@ class Queue(object):
             multi=True,
             safe=True
         )
-    
-    def _generate_and_store_karait_queue_find_helper(self):
-        karait_queue_find =  Code("""
-            function(collection, conditions, limit, visibilityTimeout) {
-                var results = [];
-                var currentTime = parseFloat(new Date().getTime()) / 1000.0;
-                
-                function hiddenByVisibilityTimeout(result) {
-                    if ( (currentTime - result._meta.accessed) < (result._meta.visibility_timeout) ) {
-                        return true;
-                    }
-                    return false;
-                }
-                
-                function expire(result) {
-                    if (result._meta.expire <= 0.0) {
-                        return false;
-                    } else if ( (currentTime - result._meta.timestamp) > result._meta.expire ) {
-                        db[collection].update({_id: result._id}, {$set: {'_meta.expired': true}})
-                        return true;
-                    }
-                }
-                
-                (function fetchResults() {
-                    var cursor = db[collection].find(conditions).limit(limit);
-                    var accessedIds = [];
-                    cursor.forEach(function(result) {
-                        if (!expire(result) && !hiddenByVisibilityTimeout(result)) {
-                            results.push(result);
-                            accessedIds.push(result._id);
-                        }
-                    });
-                    if (visibilityTimeout != -1.0) {
-                        db[collection].update({_id: {$in: accessedIds}},
-                            {
-                                $set: {
-                                    '_meta.accessed': currentTime,
-                                    '_meta.visibility_timeout': visibilityTimeout
-                                }
-                            },
-                            false,
-                            true
-                        );
-                    }
-                })();
-            
-                return results;
-            }
-        """)
-        self.queue_database['system.js'].save({'_id': 'karait_queue_find', 'value': karait_queue_find})

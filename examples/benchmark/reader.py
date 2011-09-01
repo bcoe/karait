@@ -8,7 +8,7 @@ start_time = time.time()
 
 queue = Queue()
 while True:
-  messages = queue.read(routing_key='for_reader', messages_read=15)
+  messages = queue.read(routing_key='for_reader')
   for message in messages:
     messages_read += 1.0
         

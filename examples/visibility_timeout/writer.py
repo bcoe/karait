@@ -15,4 +15,3 @@ while True:
         'messages_written_per_second': (messages_written / (time.time() - start))
     }, routing_key='for_reader')
     messages_written += 1
-    time.sleep(0.5)

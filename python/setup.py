@@ -11,7 +11,7 @@ setup(
     url="http://github.com/bcoe/karait",
     packages = find_packages(),
     install_requires = [
-        'pymongo'
+        'pymongo==2.0.1'
     ],
     tests_require=[
         'nose'

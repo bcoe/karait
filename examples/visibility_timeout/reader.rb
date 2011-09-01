@@ -9,7 +9,7 @@ start_time = Time.now().to_f
 
 queue = Karait::Queue.new
 while true
-  messages = queue.read :routing_key => 'for_reader', :messages_read => 15, :visibility_timeout => 0.1
+  messages = queue.read :routing_key => 'for_reader', :visibility_timeout => 3.0
   messages.each do |message|
     messages_read += 1.0
         

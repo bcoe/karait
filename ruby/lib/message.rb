@@ -9,13 +9,21 @@ module Karait
       @variables_to_serialize = {}
       add_accessors raw_message
     end
-        
+    
+    def to_hash
+      hash = {}
+      @variables_to_serialize.keys.each do |k|
+        hash[k] = self.send k
+      end
+      return hash
+    end
+    
     private
     
     def add_accessors(hash)
       hash.each do |k, v|
         add_accessible_attribute k, v
-        @variables_to_serialize[k] = true
+        @variables_to_serialize[k.to_s] = true
       end
     end
     

@@ -73,6 +73,10 @@ class Queue(object):
         
         if routing_key:
             conditions['_meta.routing_key'] = routing_key
+        else:
+            conditions['_meta.routing_key'] = {
+                '$exists': False
+            }
         
         for raw_message in self.queue_collection.find(conditions).limit(message_limit):
             message = Message(dictionary=raw_message, queue_collection=self.queue_collection)

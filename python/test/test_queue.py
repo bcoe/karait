@@ -123,6 +123,17 @@ class TestQueue(unittest.TestCase):
         messages = queue.read(routing_key='foobar')
         self.assertEqual(1, len(messages))
         self.assertEqual(1, messages[0].foo)
+        
+    def test_read_with_no_routing_key_only_returns_messages_with_no_routing_key(self):
+        queue = Queue(
+            database='karait_test',
+            queue='queue_test'
+        )
+        queue.write(Message({'foo': 1}), routing_key='foobar')
+        queue.write(Message({'foo': 2}))
+        messages = queue.read()
+        self.assertEqual(1, len(messages))
+        self.assertEqual(2, messages[0].foo)
     
     def test_calling_delete_on_a_message_returned_removes_it_from_mongodb(self):
         collection = Connection().karait_test.queue_test

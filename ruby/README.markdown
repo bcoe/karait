@@ -21,6 +21,7 @@ _Writing to a queue_
 
 ```ruby
 require 'karait'
+
 queue = Karait::Queue.new(
     :host => 'localhost', # MongoDB host. Defaults to _localhost_.
     :port => 27017, # MongoDB port. Defaults to _27017_.
@@ -40,23 +41,27 @@ queue.write({
 message = Karait::Message.new
 message.name = 'Benjamin'
 message.action = 'Rock!'
-queue.write(message, :routing_key => 'my_routing_key', :expire => 3.0)
 
+queue.write(message, :routing_key => 'my_routing_key', :expire => 3.0)
 ```
 
 _Reading from a queue_
 
 ```ruby
 require 'karait'
+
 queue = Karait::Queue.new
+
 message = queue.read().first
 print "#{message.name}"
+
 message.delete
 
 # or
 
 message = queue.read(:routing_key => 'my_routing_key').first
 print "#{message.action}"
+
 message.delete
 ```
 

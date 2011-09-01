@@ -3,6 +3,11 @@ require 'karait'
 require 'yaml'
 
 class TestMessage < Test::Unit::TestCase
+  
+  def setup
+    Mongo::Connection.new()['karait_test']['queue_test'].drop()
+  end
+  
   should "should add attribute accessors when initialized with a raw message" do
     message = Karait::Message.new(
       raw_message={

@@ -46,4 +46,37 @@ class TestMessage < Test::Unit::TestCase
     assert_equal 27, hash['bar'][0]
     assert_equal 4, hash.keys.count
   end
+  
+  should "not copy blacklisted keys onto message object" do
+      raw_message = {
+          '_id' => 'foobar',
+          '_meta' => {
+              'foo' => 2
+          }
+      }
+      message = Karait::Message.new(raw_message=raw_message)
+      hash = message.to_hash
+      
+      assert_equal 0, hash.keys.count
+  end
+  
+  should "set expired to true when delete is called on a message" do
+      collection = Mongo::Connection.new()['karait_test']['queue_test']
+      collection.insert({
+          'routing_key' => 'foobar',
+          'apple' => 3,
+          'banana' => 5,
+          '_meta' => {
+              'timestamp' => 2523939,
+              'expire' => 20393,
+              'expired' => false
+          }
+      })
+      raw_message = collection.find_one({'_meta.expired' => false})
+      assert_equal 3, raw_message['apple']
+      message = Karait::Message.new(raw_message=raw_message, queue_collection=collection)
+      message.delete()
+      assert_equal 0, collection.find({'_meta.expired' => false}).count
+  end
+  
 end

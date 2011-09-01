@@ -1,4 +1,4 @@
-= karait
+= Karait
 
 A ridiculously simple cross-language queuing system, built on top of MongoDB.
 
@@ -14,8 +14,26 @@ A ridiculously simple cross-language queuing system, built on top of MongoDB.
 
 == Usage
 
+* Writing to a queue
+
+[code lang="ruby"]
+require 'karait'
+queue = Karait::Queue.new(
+    :host => 'localhost', # MongoDB host, defaults to localhost.
+    :port => 27017, # MongoDB port defaults to 27017./
+    :database => 'karait', # Database that will store the karait queue, defaults to karait.
+    :queue => 'messages', # The capped collection that karait writes to, defaults to messages.
+    :average_message_size => 8192, # How big do you expect the messages will be in bytes? defaults to 8192.
+    :queue_size => 4096 # How many messages should be allowed in the queue. defaults to 4096.
+)
+[/code]
+
+* Reading from a queue
+[code lang="ruby"]
+
+[/code]
+
 == Copyright
 
 Copyright (c) 2011 bcoe. See LICENSE.txt for
 further details.
-

@@ -138,6 +138,25 @@ message.delete()
 
 See unit tests for more documentation.
 
+Atomic Operations
+-----------------
+An optional *visibility_timeout* can be set to allow for atomic operations on the same queue:
+
+```ruby
+require 'karait'
+
+queue = Karait::Queue.new
+
+message = queue.read(:routing_key='foobar', :visibility_timeout=3.0).first
+print "#{message.name}"
+message.delete
+```
+
+# or
+
+message = queue.read(:routing_key => 'my_routing_key').first
+print "#{message.action}"
+
 Examples
 --------
 

@@ -26,3 +26,15 @@ class Message(object):
             if dictionary.has_key(key):
                 del dictionary[key]
         return dictionary
+    
+    def delete(self):
+        self._queue_collection.update(
+            {
+                '_id': self._source['_id']
+            },
+            {
+                '$set': {
+                    '_meta.expired': True
+                }
+            }
+        )

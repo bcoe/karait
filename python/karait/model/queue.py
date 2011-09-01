@@ -48,25 +48,28 @@ class Queue(object):
             if not self.ALREADY_EXISTS_EXCEPTION_STRING in str(operation_failure):
                 raise operation_failure
     
-    def write(self, message, routing_key=None):
+    def write(self, message, routing_key=None, expiry=-1.0):
         if type(message) == dict:
             message_dict = message
         else:
             message_dict = message.to_dictionary()
             
         message_dict['_meta'] = {}
+        message_dict['_meta']['expired'] = False
         message_dict['_meta']['timestamp'] = time.time()
-        message_dict['_meta']['expiry'] = -1.0
+        message_dict['_meta']['expiry'] = expiry
         
         if routing_key:
             message_dict['_meta']['routing_key'] = routing_key
                 
-        self.queue_collection.insert(message_dict)
+        self.queue_collection.insert(message_dict, safe=True)
     
     def read(self, routing_key=None, message_limit=10):
         messages = []
         
-        conditions = {}
+        conditions = {
+            '_meta.expired': False
+        }
         
         if routing_key:
             conditions['_meta.routing_key'] = routing_key

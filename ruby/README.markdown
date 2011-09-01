@@ -1,8 +1,10 @@
-= Karait
+Karait
+======
 
 A ridiculously simple cross-language queuing system, built on top of MongoDB.
 
-== Contributing to karait
+Contributing to karait
+----------------------
  
 * Check out the latest master to make sure the feature hasn't been implemented or the bug hasn't been fixed yet
 * Check out the issue tracker to make sure someone already hasn't requested it and/or contributed it
@@ -12,11 +14,12 @@ A ridiculously simple cross-language queuing system, built on top of MongoDB.
 * Make sure to add tests for it. This is important so I don't break it in a future version unintentionally.
 * Please try not to mess with the Rakefile, version, or history. If you want to have your own version, or is otherwise necessary, that is fine, but please isolate to its own commit so I can cherry-pick around it.
 
-== Usage
+Usage
+-----
 
-* Writing to a queue
+_Writing to a queue_
 
-[code lang="ruby"]
+```ruby
 require 'karait'
 queue = Karait::Queue.new(
     :host => 'localhost', # MongoDB host, defaults to localhost.
@@ -26,14 +29,10 @@ queue = Karait::Queue.new(
     :average_message_size => 8192, # How big do you expect the messages will be in bytes? defaults to 8192.
     :queue_size => 4096 # How many messages should be allowed in the queue. defaults to 4096.
 )
-[/code]
+```
 
-* Reading from a queue
-[code lang="ruby"]
-
-[/code]
-
-== Copyright
+Copyright
+---------
 
 Copyright (c) 2011 bcoe. See LICENSE.txt for
 further details.

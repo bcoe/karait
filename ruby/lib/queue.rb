@@ -132,8 +132,8 @@ module Karait
         :port => 27017,
         :database => 'karait',
         :queue => 'messages',
-        :average_message_size => 4096,
-        :queue_size => 8192
+        :average_message_size => 8192,
+        :queue_size => 4096
       }.merge(opts)
       
       @host = defaults[:host]

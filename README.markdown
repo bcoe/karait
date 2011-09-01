@@ -140,7 +140,7 @@ See unit tests for more documentation.
 
 Atomic Operations
 -----------------
-An optional *visibility_timeout* can be set to allow for atomic operations on the same queue:
+An optional *visibility_timeout* can be set to allow for atomic operations on the same queue. Setting a *visiblity_timeout* will prevent other reads for the duration of the timeout in seconds:
 
 ```ruby
 require 'karait'

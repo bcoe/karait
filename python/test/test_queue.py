@@ -1,4 +1,4 @@
-import unittest
+import unittest, time
 from karait import Queue, Message
 from pymongo import Connection
 
@@ -133,4 +133,14 @@ class TestQueue(unittest.TestCase):
         queue.write(Message({'foo': 1}))
         self.assertEqual(1, collection.find({}).count())
         queue.read()[0].delete()
+        self.assertEqual(0, len(queue.read()))
+        
+    def test_expired_messages_not_returned_by_read(self):
+        queue = Queue(
+            database='karait_test',
+            queue='queue_test'
+        )
+        queue.write(Message({'foo': 1}), expire=0.1)
+        time.sleep(0.2)
+        self.assertEqual(0, len(queue.read()))
         self.assertEqual(0, len(queue.read()))

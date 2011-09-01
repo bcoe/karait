@@ -44,6 +44,24 @@ queue.write(message, :routing_key => 'my_routing_key', :expire => 3.0)
 
 ```
 
+_Reading from a queue_
+
+```ruby
+require 'karait'
+queue = Karait::Queue.new()
+message = queue.read().first()
+print "#{message.name}"
+message.delete
+
+# or
+
+message = queue.read(:routing_key => 'my_routing_key')
+print "#{message.action}"
+message.delete
+```
+
+See unit tests for more documentation.
+
 Copyright
 ---------
 

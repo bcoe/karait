@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="karait",
-    version="0.0.3",
+    version="0.0.4",
     description="A ridiculously simple cross-language queuing system, built on top of MongoDB.",
     author="Benjamin Coe",
     author_email="bencoe@gmail.com",

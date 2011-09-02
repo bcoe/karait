@@ -44,6 +44,10 @@ module Karait
       return @variables_to_serialize[key.to_s]
     end
     
+    def _get_id
+      return @source['_id']
+    end
+    
     private
     
     def set_expired

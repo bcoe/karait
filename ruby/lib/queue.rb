@@ -57,6 +57,24 @@ module Karait
       return messages
     end
     
+    def delete_messages(messages)
+      ids = []
+      messages.each {|message| ids << message._get_id}
+      @queue_collection.update(
+          {
+              '_id' => {
+                '$in' => ids
+              }
+          },
+          {
+              '$set' => {
+                  '_meta.expired' => true
+              }
+          },
+          :multi => true
+      )
+    end
+    
     private
     
     def set_instance_variables(opts)
@@ -87,6 +105,7 @@ module Karait
       @database = @connection[@database]
       create_capped_collection
       @queue_collection = @database[@queue]
+      @queue_collection.create_index('_id')
       @queue_collection.create_index('_meta.routing_key')
     end
     

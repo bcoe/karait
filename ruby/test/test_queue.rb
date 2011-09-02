@@ -195,4 +195,20 @@ class TestQueue < Test::Unit::TestCase
     messages = queue.read()
     assert_equal 0, messages.count
   end
+  
+  
+  should "remove all messages in array when delete messages called" do
+    queue = Karait::Queue.new(
+      :database => 'karait_test',
+      :queue => 'queue_test'
+    )
+    
+    queue.write Karait::Message.new({'foo' => 1})
+    queue.write Karait::Message.new({:foo => 2})
+    queue.write Karait::Message.new({'foo' => 3})
+    messages = queue.read()
+    queue.delete_messages messages
+    messages = queue.read()
+    assert_equal 0, messages.count
+  end
 end

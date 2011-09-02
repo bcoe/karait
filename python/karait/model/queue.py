@@ -42,6 +42,7 @@ class Queue(object):
                 create = True
             )
              
+            self.queue_collection.create_index('_id')
             self.queue_collection.create_index('_meta.routing_key')
              
         except pymongo.errors.OperationFailure, operation_failure:

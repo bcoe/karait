@@ -5,7 +5,7 @@ A ridiculously simple queuing system, with clients in various languages, built o
 
 The Problem?
 ------------
-The company I work for http://attachments.me faced a conundrum. SQS was not quite cutting it for some of our messaging-queue needs, but I wanted to avoid immediately pulling a new technology, .e.g., Redis or RabitMQ. Why? we don't make heavy use of a messaging queue, it's mainly for system-wide messaging, e.g., a global shutdown message before deploying new code.
+The company I work for (http://attachments.me) faced a conundrum. SQS was not quite cutting it for some of our messaging queue needs, but I wanted to avoid immediately pulling a new technology, .e.g., Redis or RabitMQ. Why? we don't make heavy use of a messaging queue, it's mainly for system-wide messaging, e.g., a global shutdown message before deploying new code.
 
 The solution? 
 -------------
@@ -137,6 +137,11 @@ message.delete()
 ```
 
 See unit tests for more documentation.
+
+Examples
+--------
+
+See the examples folder for some scripts that read and write to queues.
 
 Contributing to karait
 ----------------------

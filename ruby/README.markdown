@@ -1,7 +1,7 @@
 Karait
 ======
 
-A ridiculously simple cross-language queuing system, built on top of MongoDB.
+A ridiculously simple queuing system, with clients in various languages, built on top of MongoDB.
 
 Contributing to karait
 ----------------------

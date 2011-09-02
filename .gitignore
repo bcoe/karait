@@ -4,3 +4,17 @@
 *.coverage
 *.egg-info
 *.DS_Store
+html
+pkg
+doc
+*.gem
+nbproject
+*.bundle
+*.o
+*~
+*#*
+*.class
+*.swp
+*.pid
+*.log
+

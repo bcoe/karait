@@ -78,10 +78,14 @@ class Queue(object):
                 '$exists': False
             }
         
-        for raw_message in self.queue_collection.find(conditions).limit(message_limit):
-            message = Message(dictionary=raw_message, queue_collection=self.queue_collection)
-            if message.is_expired():
-                message.delete()
-            else:
-                messages.append(message)
+        try:
+            for raw_message in self.queue_collection.find(conditions).limit(message_limit):
+                message = Message(dictionary=raw_message, queue_collection=self.queue_collection)
+                if message.is_expired():
+                    message.delete()
+                else:
+                    messages.append(message)
+        except pymongo.errors.OperationFailure:
+            return self.read(routing_key, message_limit)
+            
         return messages

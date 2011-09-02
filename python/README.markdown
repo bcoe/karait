@@ -55,14 +55,14 @@ queue = Queue()
 message = queue.read()[0]
 print "%s" % (message.name)
 
-message.delete
+message.delete()
 
 # or
 
 message = queue.read(routing_key='my_routing_key')[0]
 print "%s" % (message.action)
 
-message.delete
+message.delete()
 ```
 
 See unit tests for more documentation.

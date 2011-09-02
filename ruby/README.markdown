@@ -55,14 +55,14 @@ queue = Karait::Queue.new
 message = queue.read().first
 print "#{message.name}"
 
-message.delete()
+message.delete
 
 # or
 
 message = queue.read(:routing_key => 'my_routing_key').first
 print "#{message.action}"
 
-message.delete()
+message.delete
 ```
 
 See unit tests for more documentation.

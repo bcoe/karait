@@ -111,4 +111,14 @@ class TestMessage < Test::Unit::TestCase
     assert_equal false, message.expired?
   end
   
+  should "allow a get method to be called to retrieve keys that conflict with class variables, e.g., send" do
+    message = Karait::Message.new(
+      raw_message={
+        :send => 5,
+        :banana => 3
+      }
+    )
+    assert_equal 3, message.get(:banana)
+    assert_equal 5, message.get(:send)
+  end
 end

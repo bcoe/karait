@@ -23,12 +23,12 @@ _Writing to a queue_
 require 'karait'
 
 queue = Karait::Queue.new(
-    :host => 'localhost', # MongoDB host. Defaults to _localhost_.
-    :port => 27017, # MongoDB port. Defaults to _27017_.
-    :database => 'karait', # Database that will store the karait queue. Defaults to _karait_.
-    :queue => 'messages', # The capped collection that karait writes to. Defaults to _messages_.
-    :average_message_size => 8192, # How big do you expect the messages will be in bytes? Defaults to _8192_.
-    :queue_size => 4096 # How many messages should be allowed in the queue. Defaults to _4096_.
+    :host => 'localhost', # MongoDB host. Defaults to localhost.
+    :port => 27017, # MongoDB port. Defaults to 27017.
+    :database => 'karait', # Database that will store the karait queue. Defaults to karait.
+    :queue => 'messages', # The capped collection that karait writes to. Defaults to messages.
+    :average_message_size => 8192, # How big do you expect the messages will be in bytes? Defaults to 8192.
+    :queue_size => 4096 # How many messages should be allowed in the queue. Defaults to 4096.
 )
 
 queue.write({

@@ -69,30 +69,33 @@ module Karait
         :average_message_size => 8192,
         :queue_size => 4096
       }.merge(opts)
-            
-      defaults.each do |k,v|
-        add_accessible_attribute(k, v)
-      end
+      
+      @host = defaults[:host]
+      @port = defaults[:port]
+      @database = defaults[:database]
+      @queue = defaults[:queue]
+      @average_message_size = defaults[:average_message_size]
+      @queue_size = defaults[:queue_size]
       
     end
     
     def create_mongo_connection
       @connection = Mongo::Connection.new(
-        self.host,
-        self.port
+        @host,
+        @port
       )
-      @database = @connection[self.database]
+      @database = @connection[@database]
       create_capped_collection
-      @queue_collection = @database[self.queue]
+      @queue_collection = @database[@queue]
       @queue_collection.create_index('_meta.routing_key')
     end
     
     def create_capped_collection
       @database.create_collection(
-        self.queue,
-        :size => (self.average_message_size * self.queue_size),
+        @queue,
+        :size => (@average_message_size * @queue_size),
         :capped => true,
-        :max => self.queue_size
+        :max => @queue_size
       )
     end
     

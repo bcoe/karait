@@ -7,14 +7,6 @@ class TestQueue < Test::Unit::TestCase
   def setup
     Mongo::Connection.new()['karait_test']['queue_test'].drop()
   end
-
-  should "initialize queue with parameters" do
-    queue = Karait::Queue.new :average_message_size => 20
-    assert_equal 20, queue.average_message_size
-    
-    queue = Karait::Queue.new
-    assert_equal 8192, queue.average_message_size
-  end
   
   should "initialize a capped collection when a queue is created" do
     queue = Karait::Queue.new(
@@ -203,5 +195,4 @@ class TestQueue < Test::Unit::TestCase
     messages = queue.read()
     assert_equal 0, messages.count
   end
-  
 end

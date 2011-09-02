@@ -3,7 +3,8 @@ module Karait
     
     include Karait
     
-    VARIABLE_REGEX = /^([a-z_][a-zA-Z_0-9]*)=$/
+    ASSIGN_VARIABLE_REGEX = /^([a-z_][a-zA-Z_0-9]*)=$/
+    VARIABLE_REGEX = /^([a-z_][a-zA-Z_0-9]*)$/
     BLACKLIST = {
         '_meta' => true,
         '_id' => true,
@@ -19,11 +20,7 @@ module Karait
     end
     
     def to_hash
-      hash = {}
-      @variables_to_serialize.keys.each do |k|
-        hash[k] = self.send k
-      end
-      return hash
+      return @variables_to_serialize
     end
     
     def delete
@@ -41,6 +38,10 @@ module Karait
     
     def expired?
       return @expired
+    end
+    
+    def get(key)
+      return @variables_to_serialize[key.to_s]
     end
     
     private
@@ -61,18 +62,18 @@ module Karait
     def add_accessors(hash)
       hash.each do |k, v|
         if not Message::BLACKLIST.has_key? k
-          add_accessible_attribute k, v
-          @variables_to_serialize[k.to_s] = true
+          @variables_to_serialize[k.to_s] = v
         end
       end
     end
     
-    def method_missing(id, *args)
-      if matches = id.to_s.match(Message::VARIABLE_REGEX) and args.count == 1
-        add_accessible_attribute(matches[1], args[0])
-        @variables_to_serialize[matches[1]] = true
+    def method_missing(sym, *args, &block)
+      if matches = sym.to_s.match(Message::ASSIGN_VARIABLE_REGEX) and args.count == 1
+        @variables_to_serialize[matches[1]] = args[0]
+      elsif matches = sym.to_s.match(Message::VARIABLE_REGEX) and args.count == 0
+        return @variables_to_serialize[matches[1]]
       else
-        raise NoMethodError
+        super(sym, *args, &block)
       end
     end
     

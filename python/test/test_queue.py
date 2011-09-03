@@ -100,7 +100,7 @@ class TestQueue(unittest.TestCase):
         self.assertEqual(2, read_message.inner_object['bar'])
         self.assertEqual(3, len(read_message.to_dictionary().keys()))
         
-    def test_messages_returned_in_lifo_order(self):
+    def test_messages_returned_in_fifo_order(self):
         queue = Queue(
             database='karait_test',
             queue='queue_test'

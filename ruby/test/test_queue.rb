@@ -112,7 +112,7 @@ class TestQueue < Test::Unit::TestCase
     assert_equal 3, read_message.to_hash.keys.count
   end
   
-  should "return messages in lifo order" do
+  should "return messages in fifo order" do
     queue = Karait::Queue.new(
       :database => 'karait_test',
       :queue => 'queue_test'

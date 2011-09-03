@@ -60,6 +60,8 @@ class Queue(object):
         message_dict['_meta']['expired'] = False
         message_dict['_meta']['timestamp'] = time.time()
         message_dict['_meta']['expire'] = expire
+        message_dict['_meta']['accessed'] = 0.0
+        message_dict['_meta']['visibility_timeout'] = 0.0
         
         if routing_key:
             message_dict['_meta']['routing_key'] = routing_key
@@ -79,7 +81,7 @@ class Queue(object):
             conditions['_meta.routing_key'] = {
                 '$exists': False
             }
-        
+            
         try:
             
             for raw_message in self.queue_database.eval(self._generate_find_with_timeouts_code(
@@ -118,23 +120,45 @@ class Queue(object):
         return pymongo.code.Code("""
             function() {
                 var results = [];
+                var currentTime = parseFloat(new Date().getTime()) / 1000.0;
+                
+                function hiddenByVisibilityTimeout(result) {
+                    if ( (currentTime - result._meta.accessed) < (result._meta.visibility_timeout) ) {
+                        return true;
+                    }
+                    return false;
+                }
                 
                 function expire(result) {
-                    var currentTime = parseFloat(new Date().getTime()) / 1000.0;
                     if (result._meta.expire <= 0.0) {
                         return false;
                     } else if ( (currentTime - result._meta.timestamp) > result._meta.expire ) {
+                        db[collection].update({_id: result._id}, {$set: {'_meta.expired': true}})
                         return true;
                     }
                 }
-            
+                
                 (function fetchResults() {
                     var cursor = db[collection].find(conditions).limit(limit);
+                    var accessedIds = [];
                     cursor.forEach(function(result) {
-                        if (!expire(result)) {
+                        if (!expire(result) && !hiddenByVisibilityTimeout(result)) {
                             results.push(result);
+                            accessedIds.push(result._id);
                         }
                     });
+                    if (visibilityTimeout != -1.0) {
+                        db[collection].update({_id: {$in: accessedIds}},
+                            {
+                                $set: {
+                                    '_meta.accessed': currentTime,
+                                    '_meta.visibility_timeout': visibilityTimeout
+                                }
+                            },
+                            false,
+                            true
+                        );
+                    }
                 })();
             
                 return results;
@@ -143,5 +167,6 @@ class Queue(object):
         {
             'conditions': conditions,
             'limit': messages_read,
-            'collection': self.queue
+            'collection': self.queue,
+            'visibilityTimeout': visibility_timeout
         })

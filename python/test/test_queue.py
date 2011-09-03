@@ -146,7 +146,7 @@ class TestQueue(unittest.TestCase):
         queue.read()[0].delete()
         self.assertEqual(0, len(queue.read()))
     
-    def test_message_with_expire_set_does_not_immediately_expre(self):
+    def test_message_with_expire_set_does_not_immediately_expire(self):
         queue = Queue(
             database='karait_test',
             queue='queue_test'
@@ -165,6 +165,11 @@ class TestQueue(unittest.TestCase):
         self.assertEqual(0, len(queue.read()))
         self.assertEqual(0, len(queue.read()))
         
+        # Make sure the meta._expired key is actually set.
+        collection = Connection().karait_test.queue_test
+        raw_message = collection.find_one({})
+        self.assertEqual(True, raw_message['_meta']['expired'])
+        
     def test_delete_messages_removes_whole_set_of_messages(self):
         queue = Queue(
             database='karait_test',
@@ -178,3 +183,19 @@ class TestQueue(unittest.TestCase):
         queue.delete_messages(messages)
         messages = queue.read()
         self.assertEqual(0, len(messages))
+        
+    def test_setting_visibility_timeout_makes_a_message_unavailable_for_a_set_number_of_milliseconds(self):
+       queue = Queue(
+           database='karait_test',
+           queue='queue_test'
+       )
+       queue.write(Message({'foo': 1}))
+       queue.write(Message({'foo': 2}))
+       queue.write(Message({'foo': 3}))
+       messages = queue.read(visibility_timeout=0.05)
+       self.assertEqual(3, len(messages))
+       messages = queue.read()
+       self.assertEqual(0, len(messages))
+       time.sleep(0.1)
+       messages = queue.read()
+       self.assertEqual(3, len(messages))

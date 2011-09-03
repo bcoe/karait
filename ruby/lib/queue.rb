@@ -22,7 +22,9 @@ module Karait
       message_dict[:_meta] = {
         :expire => opts.fetch(:expire, -1.0),
         :timestamp => Time.now().to_f,
-        :expired => false
+        :expired => false,
+        :visibility_timeout => -1.0,
+        :accessed => 0.0
       }
       
       message_dict[:_meta][:routing_key] = opts.fetch(:routing_key) if opts[:routing_key]
@@ -49,7 +51,7 @@ module Karait
             'conditions' => conditions,
             'limit' => opts.fetch(:messages_read, Queue::MESSAGES_READ),
             'collection' => @queue,
-            'visibility_timeout' => opts.fetch(:visibility_timeout, -1.0)
+            'visibilityTimeout' => opts.fetch(:visibility_timeout, -1.0)
       })).each do |raw_message|
         message = Karait::Message.new(raw_message=raw_message, queue_collection=@queue_collection)
         messages << message
@@ -122,29 +124,51 @@ module Karait
     
     def generate_find_with_timeouts_code(variable_scope)
       BSON::Code.new("
-        function() {
-          var results = [];
-        
-          function expire(result) {
-              var currentTime = parseFloat(new Date().getTime()) / 1000.0;
-              if (result._meta.expire <= 0.0) {
-                  return false;
-              } else if ( (currentTime - result._meta.timestamp) > result._meta.expire ) {
-                  return true;
-              }
-          }
-        
-          (function fetchResults() {
-              var cursor = db[collection].find(conditions).limit(limit);
-              cursor.forEach(function(result) {
-                  if (!expire(result)) {
-                      results.push(result);
-                  }
-              });
-          })();
-        
-          return results;
-        }
+            function() {
+                var results = [];
+                var currentTime = parseFloat(new Date().getTime()) / 1000.0;
+                
+                function hiddenByVisibilityTimeout(result) {
+                    if ( (currentTime - result._meta.accessed) < (result._meta.visibility_timeout) ) {
+                        return true;
+                    }
+                    return false;
+                }
+                
+                function expire(result) {
+                    if (result._meta.expire <= 0.0) {
+                        return false;
+                    } else if ( (currentTime - result._meta.timestamp) > result._meta.expire ) {
+                        db[collection].update({_id: result._id}, {$set: {'_meta.expired': true}})
+                        return true;
+                    }
+                }
+                
+                (function fetchResults() {
+                    var cursor = db[collection].find(conditions).limit(limit);
+                    var accessedIds = [];
+                    cursor.forEach(function(result) {
+                        if (!expire(result) && !hiddenByVisibilityTimeout(result)) {
+                            results.push(result);
+                            accessedIds.push(result._id);
+                        }
+                    });
+                    if (visibilityTimeout != -1.0) {
+                        db[collection].update({_id: {$in: accessedIds}},
+                            {
+                                $set: {
+                                    '_meta.accessed': currentTime,
+                                    '_meta.visibility_timeout': visibilityTimeout
+                                }
+                            },
+                            false,
+                            true
+                        );
+                    }
+                })();
+            
+                return results;
+            }
         ",
         variable_scope
       )

@@ -194,6 +194,11 @@ class TestQueue < Test::Unit::TestCase
     sleep(0.2)
     messages = queue.read()
     assert_equal 0, messages.count
+    
+    # Make sure the meta._expired key is actually set.
+    collection = Mongo::Connection.new()['karait_test']['queue_test']
+    raw_message = collection.find_one
+    assert_equal true, raw_message['_meta']['expired']
   end
   
   
@@ -210,5 +215,23 @@ class TestQueue < Test::Unit::TestCase
     queue.delete_messages messages
     messages = queue.read()
     assert_equal 0, messages.count
+  end
+  
+  should "not see message in queue again until visibility timeout has passed" do
+    queue = Karait::Queue.new(
+      :database => 'karait_test',
+      :queue => 'queue_test'
+    )
+    
+    queue.write Karait::Message.new({'foo' => 1})
+    queue.write Karait::Message.new({:foo => 2})
+    queue.write Karait::Message.new({'foo' => 3})
+    messages = queue.read(:visibility_timeout => 0.05)
+    assert_equal 3, messages.count
+    messages = queue.read(:visibility_timeout => 0.05)
+    assert_equal 0, messages.count
+    sleep(0.1)
+    messages = queue.read(:visibility_timeout => 0.05)
+    assert_equal 3, messages.count
   end
 end

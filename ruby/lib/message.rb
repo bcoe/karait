@@ -58,7 +58,7 @@ module Karait
       
       return if meta.fetch('expire', -1.0) == -1.0
       
-      if current_time - meta.fetch('timestamp', 0.0) > meta.fetch('expire', -1.0):
+      if current_time - meta.fetch('timestamp', 0.0) > meta.fetch('expire', -1.0)
         @expired = true
       end
     end

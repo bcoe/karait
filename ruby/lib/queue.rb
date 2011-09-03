@@ -45,13 +45,14 @@ module Karait
         }
       end
       
-      @queue_collection.find(conditions).limit(opts.fetch(:messages_read, Queue::MESSAGES_READ)).each do |raw_message|
+      @database.eval(generate_find_with_timeouts_code({
+            'conditions' => conditions,
+            'limit' => opts.fetch(:messages_read, Queue::MESSAGES_READ),
+            'collection' => @queue,
+            'visibility_timeout' => opts.fetch(:visibility_timeout, -1.0)
+      })).each do |raw_message|
         message = Karait::Message.new(raw_message=raw_message, queue_collection=@queue_collection)
-        if message.expired?
-          message.delete()
-        else
-          messages << message
-        end
+        messages << message
       end
       
       return messages
@@ -119,5 +120,34 @@ module Karait
       )
     end
     
+    def generate_find_with_timeouts_code(variable_scope)
+      BSON::Code.new("
+        function() {
+          var results = [];
+        
+          function expire(result) {
+              var currentTime = parseFloat(new Date().getTime()) / 1000.0;
+              if (result._meta.expire <= 0.0) {
+                  return false;
+              } else if ( (currentTime - result._meta.timestamp) > result._meta.expire ) {
+                  return true;
+              }
+          }
+        
+          (function fetchResults() {
+              var cursor = db[collection].find(conditions).limit(limit);
+              cursor.forEach(function(result) {
+                  if (!expire(result)) {
+                      results.push(result);
+                  }
+              });
+          })();
+        
+          return results;
+        }
+        ",
+        variable_scope
+      )
+    end
   end
 end

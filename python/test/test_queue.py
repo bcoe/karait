@@ -1,6 +1,6 @@
 import unittest, time
 from karait import Queue, Message
-from pymongo import Connection
+from pymongo import Connection, code
 
 class TestQueue(unittest.TestCase):
     

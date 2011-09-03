@@ -15,23 +15,12 @@ class Message(object):
         self._expired = False
         self._source = dictionary
         self._from_dictionary(dictionary)
-        self._check_if_expired()
         
     def _from_dictionary(self, dictionary):
         for key, value in dictionary.items():
             if not key in self.BLACKLIST:
                 self.__dict__[key] = value
-                
-    def _check_if_expired(self):
-        meta = self._source.get('_meta', {})
-        expire = meta.get('expire', -1.0)
-        
-        if expire == -1.0:
-            return
-        
-        if ( time.time() - meta.get('timestamp', 0.0) ) > expire:
-            self._expired = True
-        
+    
     def to_dictionary(self):
         dictionary = {}
         dictionary.update(self.__dict__)

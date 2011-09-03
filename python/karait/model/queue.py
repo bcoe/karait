@@ -28,7 +28,8 @@ class Queue(object):
             self.host,
             self.port
         )
-        self.queue_collection = self.connection[self.database][self.queue]
+        self.queue_database = self.connection[self.database]
+        self.queue_collection = self.queue_database[self.queue]
         self._create_capped_collection()
         
     def _create_capped_collection(self):
@@ -65,7 +66,7 @@ class Queue(object):
                 
         self.queue_collection.insert(message_dict, safe=True)
     
-    def read(self, routing_key=None, messages_read=10):
+    def read(self, routing_key=None, messages_read=10, visibility_timeout=-1.0):
         messages = []
         
         conditions = {
@@ -80,12 +81,14 @@ class Queue(object):
             }
         
         try:
-            for raw_message in self.queue_collection.find(conditions).limit(messages_read):
+            
+            for raw_message in self.queue_database.eval(self._generate_find_with_timeouts_code(
+                conditions=conditions,
+                messages_read=messages_read,
+                visibility_timeout=visibility_timeout
+            )):
                 message = Message(dictionary=raw_message, queue_collection=self.queue_collection)
-                if message.is_expired():
-                    message.delete()
-                else:
-                    messages.append(message)
+                messages.append(message)
         except pymongo.errors.OperationFailure:
             return self.read(routing_key, messages_read)
             
@@ -110,3 +113,35 @@ class Queue(object):
             multi=True,
             safe=True
         )
+    
+    def _generate_find_with_timeouts_code(self, conditions={}, messages_read=10, visibility_timeout=-1.0):
+        return pymongo.code.Code("""
+            function() {
+                var results = [];
+                
+                function expire(result) {
+                    var currentTime = parseFloat(new Date().getTime()) / 1000.0;
+                    if (result._meta.expire <= 0.0) {
+                        return false;
+                    } else if ( (currentTime - result._meta.timestamp) > result._meta.expire ) {
+                        return true;
+                    }
+                }
+            
+                (function fetchResults() {
+                    var cursor = db[collection].find(conditions).limit(limit);
+                    cursor.forEach(function(result) {
+                        if (!expire(result)) {
+                            results.push(result);
+                        }
+                    });
+                })();
+            
+                return results;
+            }
+        """,
+        {
+            'conditions': conditions,
+            'limit': messages_read,
+            'collection': self.queue
+        })

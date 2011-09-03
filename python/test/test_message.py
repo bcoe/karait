@@ -61,33 +61,3 @@ class TestMessage(unittest.TestCase):
         message = Message(raw_message, queue_collection=collection)
         message.delete()
         self.assertEqual(0, collection.find({'_meta.expired': False}).count())
-        
-    def test_expired_set_to_true_if_message_older_than_expire_time(self):
-        dictionary = {
-            'routing_key': 'foobar',
-            'apple': 3,
-            'banana': 5,
-            '_meta': {
-                'timestamp': 0,
-                'expire': 10,
-                'expired': False
-            }
-        }
-        
-        message = Message(dictionary)
-        self.assertEqual(True, message.is_expired())
-        
-    def test_expired_not_set_to_true_if_expire_equals_minus_one(self):
-        dictionary = {
-            'routing_key': 'foobar',
-            'apple': 3,
-            'banana': 5,
-            '_meta': {
-                'timestamp': 0,
-                'expire': -1.0,
-                'expired': False
-            }
-        }
-        
-        message = Message(dictionary)
-        self.assertEqual(False, message.is_expired())

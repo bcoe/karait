@@ -84,18 +84,54 @@ class Queue(object):
             }
             
         try:
-            
-            for raw_message in self.queue_database.eval(self._generate_find_with_timeouts_code(
+            raw_messages = self._get_raw_messages(
                 conditions=conditions,
                 messages_read=messages_read,
                 visibility_timeout=visibility_timeout
-            )):
+            )
+            
+            for raw_message in raw_messages:
                 message = Message(dictionary=raw_message, queue_collection=self.queue_collection)
                 messages.append(message)
+                
         except pymongo.errors.OperationFailure:
             return self.read(routing_key, messages_read)
             
         return messages
+    
+    def _get_raw_messages(self, conditions={}, messages_read=10, visibility_timeout=-1.0, retry=True):
+        if not self.queue_collection.find(conditions).count():
+            return []
+        
+        raw_messages = self.queue_database.eval(
+            Code(
+                """
+                function() {
+                    if (typeof karait_queue_find === 'undefined') {
+                        return false;
+                    }
+                    return karait_queue_find(collection, conditions, limit, visibilityTimeout);
+                }
+                """,
+                {
+                    'conditions': conditions,
+                    'limit': messages_read,
+                    'visibilityTimeout': visibility_timeout,
+                    'collection': self.queue
+                }
+            )
+        )
+        if raw_messages:
+            return raw_messages
+        elif not raw_messages and retry:
+            self._generate_and_store_karait_queue_find_helper()
+            return self._get_raw_messages(
+                conditions=conditions,
+                messages_read=messages_read,
+                visibility_timeout=visibility_timeout,
+                retry=False
+            )
+        return []
     
     def delete_messages(self, messages):
         ids = []
@@ -117,9 +153,9 @@ class Queue(object):
             safe=True
         )
     
-    def _generate_find_with_timeouts_code(self, conditions={}, messages_read=10, visibility_timeout=-1.0):
-        return Code("""
-            function() {
+    def _generate_and_store_karait_queue_find_helper(self):
+        karait_queue_find =  Code("""
+            function(collection, conditions, limit, visibilityTimeout) {
                 var results = [];
                 var currentTime = parseFloat(new Date().getTime()) / 1000.0;
                 
@@ -164,10 +200,5 @@ class Queue(object):
             
                 return results;
             }
-        """,
-        {
-            'conditions': conditions,
-            'limit': messages_read,
-            'collection': self.queue,
-            'visibilityTimeout': visibility_timeout
-        })
+        """)
+        self.queue_database['system.js'].save({'_id': 'karait_queue_find', 'value': karait_queue_find})

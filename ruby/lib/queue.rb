@@ -47,12 +47,11 @@ module Karait
         }
       end
       
-      @database.eval(generate_find_with_timeouts_code({
-            'conditions' => conditions,
-            'limit' => opts.fetch(:messages_read, Queue::MESSAGES_READ),
-            'collection' => @queue,
-            'visibilityTimeout' => opts.fetch(:visibility_timeout, -1.0)
-      })).each do |raw_message|
+      get_raw_messages(
+        conditions,
+        opts.fetch(:messages_read, Queue::MESSAGES_READ),
+        opts.fetch(:visibility_timeout, -1.0)
+      ).each do |raw_message|
         message = Karait::Message.new(raw_message=raw_message, queue_collection=@queue_collection)
         messages << message
       end
@@ -80,6 +79,37 @@ module Karait
     end
     
     private
+    
+    def get_raw_messages(conditions, messages_read, visibility_timeout, should_retry=true)
+      if @queue_collection.find(conditions).count() == 0
+        return []
+      end
+      
+      raw_messages = @database.eval(BSON::Code.new(
+        "
+        function() {
+            if (typeof karait_queue_find === 'undefined') {
+                return false;
+            }
+            return karait_queue_find(collection, conditions, limit, visibilityTimeout);
+        }
+        ",
+        {
+          'conditions' => conditions,
+          'limit' => messages_read,
+          'collection' => @queue,
+          'visibilityTimeout' => visibility_timeout
+        })
+      )
+      
+      if raw_messages
+        return raw_messages
+      elsif should_retry
+        generate_and_store_karait_queue_find_helper
+        return get_raw_messages(conditions, messages_read, visibility_timeout, false)
+      end
+      return []
+    end
     
     def set_instance_variables(opts)
       
@@ -122,56 +152,57 @@ module Karait
       )
     end
     
-    def generate_find_with_timeouts_code(variable_scope)
-      BSON::Code.new("
-            function() {
-                var results = [];
-                var currentTime = parseFloat(new Date().getTime()) / 1000.0;
-                
-                function hiddenByVisibilityTimeout(result) {
-                    if ( (currentTime - result._meta.accessed) < (result._meta.visibility_timeout) ) {
-                        return true;
-                    }
-                    return false;
-                }
-                
-                function expire(result) {
-                    if (result._meta.expire <= 0.0) {
-                        return false;
-                    } else if ( (currentTime - result._meta.timestamp) > result._meta.expire ) {
-                        db[collection].update({_id: result._id}, {$set: {'_meta.expired': true}})
-                        return true;
-                    }
-                }
-                
-                (function fetchResults() {
-                    var cursor = db[collection].find(conditions).limit(limit);
-                    var accessedIds = [];
-                    cursor.forEach(function(result) {
-                        if (!expire(result) && !hiddenByVisibilityTimeout(result)) {
-                            results.push(result);
-                            accessedIds.push(result._id);
-                        }
-                    });
-                    if (visibilityTimeout != -1.0) {
-                        db[collection].update({_id: {$in: accessedIds}},
-                            {
-                                $set: {
-                                    '_meta.accessed': currentTime,
-                                    '_meta.visibility_timeout': visibilityTimeout
-                                }
-                            },
-                            false,
-                            true
-                        );
-                    }
-                })();
+    def generate_and_store_karait_queue_find_helper
+      karait_queue_find = BSON::Code.new(
+        "
+        function(collection, conditions, limit, visibilityTimeout) {
+            var results = [];
+            var currentTime = parseFloat(new Date().getTime()) / 1000.0;
             
-                return results;
+            function hiddenByVisibilityTimeout(result) {
+                if ( (currentTime - result._meta.accessed) < (result._meta.visibility_timeout) ) {
+                    return true;
+                }
+                return false;
             }
-        ",
-        variable_scope
+            
+            function expire(result) {
+                if (result._meta.expire <= 0.0) {
+                    return false;
+                } else if ( (currentTime - result._meta.timestamp) > result._meta.expire ) {
+                    db[collection].update({_id: result._id}, {$set: {'_meta.expired': true}})
+                    return true;
+                }
+            }
+            
+            (function fetchResults() {
+                var cursor = db[collection].find(conditions).limit(limit);
+                var accessedIds = [];
+                cursor.forEach(function(result) {
+                    if (!expire(result) && !hiddenByVisibilityTimeout(result)) {
+                        results.push(result);
+                        accessedIds.push(result._id);
+                    }
+                });
+                if (visibilityTimeout != -1.0) {
+                    db[collection].update({_id: {$in: accessedIds}},
+                        {
+                            $set: {
+                                '_meta.accessed': currentTime,
+                                '_meta.visibility_timeout': visibilityTimeout
+                            }
+                        },
+                        false,
+                        true
+                    );
+                }
+            })();
+        
+            return results;
+        }
+        "
       )
+      @database['system.js'].save({:_id => 'karait_queue_find', :value => karait_queue_find})
     end
   end
 end

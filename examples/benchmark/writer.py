@@ -13,5 +13,5 @@ while True:
         'sender': 'writer.py',
         'started_running': start,
         'messages_written_per_second': (messages_written / (time.time() - start))
-    }, routing_key='for_ruby_reader_writer')
+    }, routing_key='for_reader')
     messages_written += 1

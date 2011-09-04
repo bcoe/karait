@@ -1,5 +1,6 @@
 import time
 import pymongo
+from pymongo.code import Code
 from karait.model.message import Message
 
 class Queue(object):
@@ -117,7 +118,7 @@ class Queue(object):
         )
     
     def _generate_find_with_timeouts_code(self, conditions={}, messages_read=10, visibility_timeout=-1.0):
-        return pymongo.code.Code("""
+        return Code("""
             function() {
                 var results = [];
                 var currentTime = parseFloat(new Date().getTime()) / 1000.0;

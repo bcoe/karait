@@ -27,6 +27,15 @@ Demonstrates broadcast and routed messaging in the queue.
 * Run _ruby_process.rb_ and _python_process.py_ in separate terminals.
 * Run the shutdown scripts to terminate the processes.
 
+Visibility Timeout
+==================
+
+Demonstrates the use of the visibility_timeout flag.
+
+* Run a single _writer.py_.
+* Run multiple _reader.rb_ files.
+* Due to the usage of visibility timeouts, only one reader should see each message.
+
 Copyright
 ---------
 

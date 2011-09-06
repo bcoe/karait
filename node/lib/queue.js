@@ -10,6 +10,12 @@ var nativeParserError = 'Native bson parser not compiled';
 var makeFloat = 0.0000001;
     
 exports.Queue = function(params, onQueueReady) {
+    
+    if (typeof(params) === 'function') {
+        onQueueReady = params;
+        params = {};
+    }
+    
     var defaults = {
         host: 'localhost',
         port: 27017,

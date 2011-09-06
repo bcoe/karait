@@ -14,7 +14,7 @@ exports.tests = {
             queue: 'queue_test',
             averageMessageSize: 8192,
             queueSize: 4096,
-            collectionCreatedHook: function() {
+            onQueueReady: function(err) {
                 queue.queueCollection.options(function(err, options) {
                     equal(true, options.capped, prefix + 'collection not capped');
                     equal(4096, options.max, prefix + 'invalid max queue size');
@@ -52,7 +52,7 @@ exports.tests = {
                     queue: 'queue_test',
                     averageMessageSize: 8192,
                     queueSize: 4096,
-                    collectionCreatedHook: function() {
+                    onQueueReady: function() {
                         queue.queueCollection.options(function(err, options) {
                             collection.count({}, function(err, count) {
                                 equal(1, count, prefix + 'count should be 1.');
@@ -72,12 +72,11 @@ exports.tests = {
             queue: 'queue_test',
             averageMessageSize: 8192,
             queueSize: 4096,
-            collectionCreatedHook: function() {
+            onQueueReady: function() {
                 queue.write(
                     {
                         foo: 'bar'
                     }, 
-                    {},
                     function() {
                         var db = new Db('karait_test', new Server('localhost', 27017, {}), {native_parser:false});
                         db.open(function(err, db) {
@@ -101,7 +100,7 @@ exports.tests = {
             queue: 'queue_test',
             averageMessageSize: 8192,
             queueSize: 4096,
-            collectionCreatedHook: function() {
+            onQueueReady: function() {
                 var message = new Message(
                     {
                         'bar': 'foo'
@@ -110,7 +109,6 @@ exports.tests = {
                 
                 queue.write(
                     message,
-                    {},
                     function() {
                         var db = new Db('karait_test', new Server('localhost', 27017, {}), {native_parser:false});
                         db.open(function(err, db) {
@@ -139,7 +137,7 @@ exports.tests = {
             queue: 'queue_test',
             averageMessageSize: 8192,
             queueSize: 4096,
-            collectionCreatedHook: function() {
+            onQueueReady: function() {
                 writeMessage = new Message({
                    foo: 1,
                    bar: 2,
@@ -148,11 +146,57 @@ exports.tests = {
                    }
                 });
                 queue.write(writeMessage, {}, function() {
-                    readMessage = queue.read(function(messages) {
+                    queue.read(function(err, messages) {
                         var readMessage = messages[0];
                         equal(1, readMessage.foo, prefix + 'foo not set');
                         equal(3, readMessage.innerObject.apple, prefix + 'inner object not found');
                         finished();
+                    });
+                });
+            }
+        });
+    },
+    
+    'should only return messages that match routing key': function(finished, prefix) {
+        var queue = new Queue({
+            database: 'karait_test',
+            queue: 'queue_test',
+            averageMessageSize: 8192,
+            queueSize: 4096,
+            onQueueReady: function() {
+                queue.write({foo: 'bar'}, {routingKey: 'foobar'}, function() {
+                    queue.write({bar: 'foo'}, function() {
+                        queue.read({routingKey: 'foobar'}, function(err, messages) {
+                            equal(1, messages.length, prefix + messages.length + ' not equal to 1');
+                            equal('bar', messages[0].foo, prefix + messages[0].foo + ' not equal to bar');
+                            queue.read(function(err, messages) {
+                                equal(1, messages.length, prefix + messages.length + ' not equal to 1');
+                                equal('foo', messages[0].bar, prefix + messages[0].bar + ' not equal to foo');
+                                finished();
+                            });
+                        });
+                    });
+                });
+            }
+        });
+    },
+    
+    'should no longer return a message when delete is called on it': function(finished, prefix) {
+        var queue = new Queue({
+            database: 'karait_test',
+            queue: 'queue_test',
+            averageMessageSize: 8192,
+            queueSize: 4096,
+            onQueueReady: function() {
+                queue.write({foo: 'bar'}, function() {
+                    queue.read(function(err, messages) {
+                        equal(1, messages.length, prefix + messages.length + ' not equal to 1');
+                        messages[0].delete(function() {
+                            queue.read(function(err, messages) {
+                                equal(0, messages.length, prefix + messages.length + ' not equal to 0');
+                                finished();
+                            });
+                        });
                     });
                 });
             }

@@ -9,6 +9,22 @@ exports.Message = function(source, queueCollection) {
             this[key] = this._source[key];
         }
     }
+    this._checkIfExpired();
+};
+
+exports.Message.prototype._checkIfExpired = function() {
+    var meta = this._source._meta || {},
+        expire = meta.expire || -1.0,
+        currentTime = (new Date()).getTime() / 1000.0,
+        timestamp = meta.timestamp || 0.0;
+        
+    if (expire == -1.0) {
+        return;
+    }
+    
+    if ( (currentTime - timestamp) > expire ) {
+       self._expired = true;
+    }
 };
 
 exports.Message.prototype.BLACKLIST = {
@@ -42,4 +58,8 @@ exports.Message.prototype.delete = function(callback) {
         },
         callback
     );
-}
+};
+
+exports.Message.prototype.isExpired = function() {
+    return this._expired;
+};

@@ -66,12 +66,12 @@ exports.tests = {
             queue: 'queue_test',
             averageMessageSize: 8192,
             queueSize: 4096,
-            collectionCreatedHook: function() {
+            onQueueReady: function() {
                 queue.write({'foo': 'bar'}, {}, function() {
-                    queue.read(function(messages) {
+                    queue.read(function(err, messages) {
                         equal(1, messages.length, prefix + 'queue does not have one message');
                         messages[0].delete(function() {
-                            queue.read(function(messages) {
+                            queue.read(function(err, messages) {
                                 equal(0, messages.length, prefix + 'queue is not empty');
                                 finished();
                             });
@@ -80,5 +80,27 @@ exports.tests = {
                 });
             }
         });
-    }
+    }/*,
+    
+    'should set a message to expired if current time > than expires time': function(finished, prefix) {
+        var queue = new Queue({
+            database: 'karait_test',
+            queue: 'queue_test',
+            averageMessageSize: 8192,
+            queueSize: 4096,
+            onQueueReady: function() {
+                queue.write({'foo': 'bar'}, {expires: 0.01}, function() {
+                    queue.read(function(err, messages) {
+                        equal(1, messages.length, prefix + 'queue does not have one message');
+                        messages[0].delete(function() {
+                            queue.read(function(err, messages) {
+                                equal(0, messages.length, prefix + 'queue is not empty');
+                                finished();
+                            });
+                        });
+                    });
+                });
+            }
+        });
+    }*/
 };

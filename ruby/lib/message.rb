@@ -60,6 +60,7 @@ module Karait
       
       if current_time - meta.fetch('timestamp', 0.0) > meta.fetch('expire', -1.0)
         @expired = true
+        delete
       end
     end
     

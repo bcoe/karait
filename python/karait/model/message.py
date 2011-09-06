@@ -31,6 +31,7 @@ class Message(object):
         
         if ( time.time() - meta.get('timestamp', 0.0) ) > expire:
             self._expired = True
+            self.delete()
     
     def to_dictionary(self):
         dictionary = {}

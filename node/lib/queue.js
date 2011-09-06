@@ -16,8 +16,7 @@ exports.Queue = function(params) {
         queue: 'messages',
         averageMessageSize: 8192,
         queueSize: 4096,
-        errorHandler: function(err) {},
-        collectionCreatedHook: function() {}
+        onQueueReady: function(err, queue) {}
     };
     extend(this, defaults, params);
     this._initializeQueue(true);
@@ -37,13 +36,15 @@ exports.Queue.prototype._initializeQueue = function(nativeParser) {
            this._initializeQueue(false);
            return;
         } else {
-           this.errorHandler(err);
+           this.onQueueReady(err, null);
+           return;
         }
     }
     
     db.open(function(err, db) {
         if (err) {
-            _this.errorHandler(err);
+            _this.onQueueReady(err, null);
+            return;
         } else {
             _this.db = db;
             _this._createCappedCollection(db);
@@ -62,11 +63,12 @@ exports.Queue.prototype._createCappedCollection = function(db) {
         }, 
         function(err, collection) {
             if (err) {
-                _this.errorHandler(err);
+                _this.onQueueReady(err, null);
+                return;
             }
             _this.queueCollection = collection;
             _this._createIndexes();
-            _this.collectionCreatedHook();
+            _this.onQueueReady(null, _this);
         }
     );
 };
@@ -78,7 +80,15 @@ exports.Queue.prototype._createIndexes = function() {
     this.queueCollection.createIndex('_meta.visible_after', function(){});
 }
 
-exports.Queue.prototype.write = function(message, options, callback) {
+exports.Queue.prototype.write = function(message, params, callback) {
+    
+    if (typeof(params) === 'function') {
+        callback = params;
+        params = {};
+    }
+    
+    callback = callback || function() {};
+    
     if (message.toObject) {
         var messageObject = message.toObject();
     } else {
@@ -91,15 +101,17 @@ exports.Queue.prototype.write = function(message, options, callback) {
         expired: false,
         visible_after: -1.0
     }
+    
+    if (params.routingKey) {
+        messageObject._meta.routing_key = params.routingKey;
+    }
+    
     this.queueCollection.insert(messageObject, {safe: true}, callback);
 };
 
 exports.Queue.prototype.read = function(params, callback) {
-    var _this = this;
-    
-    if (typeof(params) == 'undefined') {
-        params = {};
-    }
+    var _this = this,
+        params = params || {};
     
     if (typeof(params) === 'function') {
         callback = params;
@@ -109,7 +121,7 @@ exports.Queue.prototype.read = function(params, callback) {
     callback = callback || function() {};
     
     extend(
-        params, 
+        params,
         {
             messagesRead: 10,
             visibilityTimeout: -1.0,
@@ -119,14 +131,13 @@ exports.Queue.prototype.read = function(params, callback) {
     );
     
     var currentTime = (new Date()).getTime() / 1000.0,
-        messages = [],
         query = {
             '_meta.expired': false,
             '_meta.visible_after': {
                 '$lt': currentTime
             }
         },
-        update = false
+        update = false;
     
     if (params.routingKey) {
         query['_meta.routing_key'] = params.routingKey
@@ -144,18 +155,30 @@ exports.Queue.prototype.read = function(params, callback) {
         }
     }
     
-    this.queueCollection.find(query, {limit: params.messagesRead}, function(err, cursor) {
+    if (!update) {
+        this._normalFind(query, params.messagesRead, callback);
+    }
+};
+
+exports.Queue.prototype._normalFind = function(query, limit, callback) {
+    
+    var messages = [],
+        _this = this;
+        
+    this.queueCollection.find(query, {limit: limit}, function(err, cursor) {
         if (err) {
-            _this.errorHandler(err);
+            callback(err, null);
+            return;
         } else {
            cursor.toArray(function(err, items) {
                if (err) {
-                   _this.errorHandler(err);
+                   callback(err, null);
+                   return;
                } else {
                    for (var i = 0, item; (item = items[i]) != null; i++) {
                        messages.push(new Message(item, _this.queueCollection));
                    }
-                   callback(messages);
+                   callback(null, messages);
                }
            });
         }

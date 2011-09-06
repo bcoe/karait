@@ -80,6 +80,33 @@ exports.Queue.prototype._createIndexes = function() {
     this.queueCollection.createIndex('_meta.visible_after', function(){});
 }
 
+exports.Queue.prototype.deleteMessages = function(messages, callback) {
+    callback = callback || {};
+    
+    var deleteIds = [];
+    for (var i = 0, message; (message = messages[i]) != null; i++) {
+        deleteIds.push(message._source._id);
+    }
+        
+    this.queueCollection.update(
+        {
+            _id: {
+                $in: deleteIds
+            }
+        },
+        {
+            $set: {
+                '_meta.expired': true
+            }
+        },
+        {
+            safe: true,
+            multi: true
+        },
+        callback
+    );
+};
+
 exports.Queue.prototype.write = function(message, params, callback) {
     
     if (typeof(params) === 'function') {

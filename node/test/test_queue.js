@@ -236,5 +236,52 @@ exports.tests = {
                 });
             }
         );
+    },
+    
+    'should not immediately expire a message when written if expire set': function(finished, prefix) {
+        new Queue(
+            {
+                database: 'karait_test',
+                queue: 'queue_test',
+                averageMessageSize: 8192,
+                queueSize: 4096
+            },
+            function(err, queue) {
+                queue.write({foo: 'bar'}, {expire: 0.1}, function() {
+                    setTimeout(function() {
+                        queue.read(function(err, messages) {
+                            equal(1, messages.length, prefix + messages.length + ' not equal to 1');
+                            finished();
+                        });
+                    }, 1);
+                });
+            }
+        );
+    },
+    
+    'should remove all messages when deleteMessages() is called with an array of messages': function(finished, prefix) {
+        new Queue(
+            {
+                database: 'karait_test',
+                queue: 'queue_test',
+                averageMessageSize: 8192,
+                queueSize: 4096
+            },
+            function(err, queue) {
+                queue.write({foo: 'bar'}, function() {
+                    queue.write({foo: 'bar'}, function() {
+                        queue.read(function(err, messages) {
+                            equal(2, messages.length, prefix + messages.length + ' not equal to 2');
+                            queue.deleteMessages(messages, function() {
+                                queue.read(function(err, messages) {
+                                    equal(0, messages.length, prefix + messages.length + ' not equal to 0');
+                                    finished();
+                                });
+                            });
+                        });
+                    });
+                });
+            }
+        );
     }
 };

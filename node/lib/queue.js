@@ -77,8 +77,12 @@ exports.Queue.prototype._createIndexes = function() {
     this.queueCollection.createIndex('_meta.visible_after', function(){});
 }
 
-exports.Queue.prototype.write = function(rawMessage, options) {
-    var messageObject = rawMessage;
+exports.Queue.prototype.write = function(message, options, callback) {
+    if (message.toObject) {
+        var messageObject = message.toObject();
+    } else {
+        var messageObject = message;
+    }
     
     messageObject._meta = {
         expire: -1.0,
@@ -86,6 +90,5 @@ exports.Queue.prototype.write = function(rawMessage, options) {
         expired: false,
         visible_after: -1.0
     }
-    
-    this.queueCollection.insert(messageObject, {safe: true});
+    this.queueCollection.insert(messageObject, {safe: true}, callback);
 };

@@ -53,8 +53,13 @@ exports.tests = {
         };
         var message = new Message(object);
         var rawMessage = message.toObject();
-        equal(null, rawMessage._id, '_id was serialized');
-        equal(null, rawMessage._meta, '_meta was serialized');
-        equal(5, rawMessage.foo, 'foo was not serialized');
+        equal(null, rawMessage._id, prefix + '_id was serialized');
+        equal(null, rawMessage._meta, prefix + '_meta was serialized');
+        equal(5, rawMessage.foo, prefix + 'foo was not serialized');
+        finished();
+    },
+    
+    'should remove a message from mongodb when delete is called on it': function(finished, prefix) {
+        finished();
     }
 };

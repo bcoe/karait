@@ -1,5 +1,5 @@
-var queueTests = require('./queue_test'),
-    messageTests = require('./message_test'),
+var queueTests = require('./test_queue'),
+    messageTests = require('./test_message'),
     puts = require('sys').puts,
     mongodb = require('mongodb'),
     Db = mongodb.Db,

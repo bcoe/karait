@@ -131,5 +131,31 @@ exports.tests = {
                 );
             }
         });
+    },
+    
+    'should read a messge object from the mongo queue collection': function(finished, prefix) {
+        var queue = new Queue({
+            database: 'karait_test',
+            queue: 'queue_test',
+            averageMessageSize: 8192,
+            queueSize: 4096,
+            collectionCreatedHook: function() {
+                writeMessage = new Message({
+                   foo: 1,
+                   bar: 2,
+                   innerObject: {
+                       apple: 3
+                   }
+                });
+                queue.write(writeMessage, {}, function() {
+                    readMessage = queue.read(function(messages) {
+                        var readMessage = messages[0];
+                        equal(1, readMessage.foo, prefix + 'foo not set');
+                        equal(3, readMessage.innerObject.apple, prefix + 'inner object not found');
+                        finished();
+                    });
+                });
+            }
+        });
     }
 };

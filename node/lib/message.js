@@ -1,10 +1,14 @@
 var extend = require('./helpers').extend,
     puts = require('sys').puts;
     
-exports.Message = function(params) {
-    var defaults = {
-    };
-    extend(this, defaults, params);
+exports.Message = function(source, queueCollection) {
+    this._source = source || {};
+    this._queueCollection = queueCollection;
+    for (var key in this._source) {
+        if (this._source.hasOwnProperty(key) && !this.BLACKLIST[key]) {
+            this[key] = this._source[key];
+        }
+    }
 };
 
 exports.Message.prototype.BLACKLIST = {
@@ -12,7 +16,7 @@ exports.Message.prototype.BLACKLIST = {
     '_id': true,
     '_source': true,
     '_expired': true,
-    '_queue_collection': true
+    '_queueCollection': true
 };
 
 exports.Message.prototype.toObject = function() {
@@ -24,3 +28,18 @@ exports.Message.prototype.toObject = function() {
     }
     return object;
 };
+
+exports.Message.prototype.delete = function(callback) {
+    callback = callback || function() {};
+    this._queueCollection.update(
+        {
+            '_id': this._source._id
+        },
+        {
+            '$set': {
+                '_meta.expired': true
+            }
+        },
+        callback
+    );
+}

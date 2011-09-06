@@ -1,6 +1,7 @@
 var equal = require('assert').equal,
     puts = require('sys').puts,
     Message = require('../lib').Message,
+    Queue = require('../lib').Queue,
     mongodb = require('mongodb'),
     Db = mongodb.Db,
     Connection = mongodb.Connection,
@@ -58,8 +59,26 @@ exports.tests = {
         equal(5, rawMessage.foo, prefix + 'foo was not serialized');
         finished();
     },
-    
+
     'should remove a message from mongodb when delete is called on it': function(finished, prefix) {
-        finished();
+        var queue = new Queue({
+            database: 'karait_test',
+            queue: 'queue_test',
+            averageMessageSize: 8192,
+            queueSize: 4096,
+            collectionCreatedHook: function() {
+                queue.write({'foo': 'bar'}, {}, function() {
+                    queue.read(function(messages) {
+                        equal(1, messages.length, prefix + 'queue does not have one message');
+                        messages[0].delete(function() {
+                            queue.read(function(messages) {
+                                equal(0, messages.length, prefix + 'queue is not empty');
+                                finished();
+                            });
+                        });
+                    });
+                });
+            }
+        });
     }
 };

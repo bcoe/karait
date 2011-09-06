@@ -1,4 +1,5 @@
 var extend = require('./helpers').extend,
+    Message = require('./message').Message,
     puts = require('sys').puts,
     mongodb = require('mongodb'),
     Db = mongodb.Db,
@@ -91,4 +92,72 @@ exports.Queue.prototype.write = function(message, options, callback) {
         visible_after: -1.0
     }
     this.queueCollection.insert(messageObject, {safe: true}, callback);
+};
+
+exports.Queue.prototype.read = function(params, callback) {
+    var _this = this;
+    
+    if (typeof(params) == 'undefined') {
+        params = {};
+    }
+    
+    if (typeof(params) === 'function') {
+        callback = params;
+        params = {};
+    }
+    
+    callback = callback || function() {};
+    
+    extend(
+        params, 
+        {
+            messagesRead: 10,
+            visibilityTimeout: -1.0,
+            routingKey: null
+        },
+        params
+    );
+    
+    var currentTime = (new Date()).getTime() / 1000.0,
+        messages = [],
+        query = {
+            '_meta.expired': false,
+            '_meta.visible_after': {
+                '$lt': currentTime
+            }
+        },
+        update = false
+    
+    if (params.routingKey) {
+        query['_meta.routing_key'] = params.routingKey
+    } else {
+        query['_meta.routing_key'] = {
+            '$exists': false
+        }
+    }
+    
+    if (params.visibilityTimeout != -1.0) {
+        update = {
+            '$set': {
+              '_meta.visible_after': current_time + params.visiblityTimeout
+            }
+        }
+    }
+    
+    this.queueCollection.find(query, {limit: params.messagesRead}, function(err, cursor) {
+        if (err) {
+            _this.errorHandler(err);
+        } else {
+           cursor.toArray(function(err, items) {
+               if (err) {
+                   _this.errorHandler(err);
+               } else {
+                   for (var i = 0, item; (item = items[i]) != null; i++) {
+                       messages.push(new Message(item, _this.queueCollection));
+                   }
+                   callback(messages);
+               }
+           });
+        }
+    });
 };

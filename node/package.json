@@ -1,0 +1,23 @@
+{
+  "name": "karait",
+  "directories": {
+    "lib": "./lib"
+  },
+  "main": "./lib/index",
+  "version": "0.0.1",
+  "author": "Ben Coe <bencoe@gmail.com>",
+  "engines": [
+    "node"
+  ],
+  "description": "A ridiculously simple queuing system, with clients in various languages, built on top of MongoDB.",
+  "keywords": [
+    "mongodb",
+    "queue"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/bcoe/karait.git"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

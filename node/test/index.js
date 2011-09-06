@@ -13,7 +13,7 @@ function run(callback, test) {
         db.dropCollection('queue_test', function(err, result) {
             callback(
                 function() {
-                    puts(test + ' [Success]');
+                    puts(test + ' \033[32m[Success]\033[m');
                     var nextTest = tests.shift();
                     if (nextTest) {
                         nextTest();

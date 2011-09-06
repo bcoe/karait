@@ -26,7 +26,7 @@ class Message(object):
         meta = self._source.get('_meta', {})
         expire = meta.get('expire', -1.0)
         
-        if expire == -1.0:
+        if expire <= -1.0:
             return
         
         if ( time.time() - meta.get('timestamp', 0.0) ) > expire:

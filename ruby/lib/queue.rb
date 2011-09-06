@@ -57,7 +57,7 @@ module Karait
       end
       
       update = false
-      if opts[:visibility_timeout] != -1.0
+      if opts[:visibility_timeout] > -1.0
         update = {
             '$set' => {
               '_meta.visible_after' => current_time + opts[:visibility_timeout]

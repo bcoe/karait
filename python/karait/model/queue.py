@@ -87,7 +87,7 @@ class Queue(object):
             }
         
         update = {}
-        if visibility_timeout != -1.0:
+        if visibility_timeout > -1.0:
             update = {
                 "$set": {
                     "_meta.visible_after": current_time + visibility_timeout

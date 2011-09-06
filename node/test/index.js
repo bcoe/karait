@@ -1,4 +1,5 @@
 var queueTests = require('./queue_test'),
+    messageTests = require('./message_test'),
     puts = require('sys').puts,
     mongodb = require('mongodb'),
     Db = mongodb.Db,
@@ -24,12 +25,16 @@ function run(callback, test) {
     });
 }
 
-for (var test in queueTests.tests) {
-    (function(func, name) {
-        tests.push(function() {
-            run(func, name);
-        });
-    })(queueTests.tests[test], test);
+function addTests(testsObject) {
+    for (var test in testsObject) {
+        (function(func, name) {
+            tests.push(function() {
+                run(func, name);
+            });
+        })(testsObject[test], test);
+    }
 }
 
+addTests(queueTests.tests);
+addTests(messageTests.tests);
 tests.shift()();

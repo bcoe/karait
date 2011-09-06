@@ -7,6 +7,7 @@ var extend = require('./helpers').extend,
     Server = mongodb.Server;
     
 var nativeParserError = 'Native bson parser not compiled';
+var makeFloat = 0.0000001;
     
 exports.Queue = function(params, onQueueReady) {
     var defaults = {
@@ -123,10 +124,10 @@ exports.Queue.prototype.write = function(message, params, callback) {
     }
     
     messageObject._meta = {
-        expire: params.expire || -1.0,
+        expire: (params.expire || -1) - makeFloat,
         timestamp: (new Date()).getTime() / 1000.0,
         expired: false,
-        visible_after: -1.0
+        visible_after: -1 - makeFloat
     }
     
     if (params.routingKey) {
@@ -151,7 +152,7 @@ exports.Queue.prototype.read = function(params, callback) {
         params,
         {
             messagesRead: 10,
-            visibilityTimeout: -1.0,
+            visibilityTimeout: -1.0 - makeFloat,
             routingKey: null
         },
         params
@@ -174,16 +175,18 @@ exports.Queue.prototype.read = function(params, callback) {
         }
     }
     
-    if (params.visibilityTimeout != -1.0) {
+    if (params.visibilityTimeout > -1.0) {
         update = {
             '$set': {
-              '_meta.visible_after': current_time + params.visiblityTimeout
+              '_meta.visible_after': currentTime + params.visibilityTimeout
             }
         }
     }
     
     if (!update) {
         this._normalFind(query, params.messagesRead, callback);
+    } else {
+        this._atomicFind(query, update, params.messagesRead, callback);
     }
 };
 
@@ -213,4 +216,34 @@ exports.Queue.prototype._normalFind = function(query, limit, callback) {
            });
         }
     });
+};
+
+exports.Queue.prototype._atomicFind = function(query, update, limit, callback) {
+    var messages = [],
+        count = 0,
+        _this = this;
+        
+   (function fetchDocument() {
+        _this.queueCollection.findAndModify(query, [], update, {safe: true}, function(err, item) {
+            if (err) {
+                callback(err, null);
+                return;
+            } else {
+                
+                if (item) {
+                    var message = new Message(item, _this.queueCollection);
+                    
+                    if (!message.isExpired()) {
+                        messages.push(message);
+                    }
+                }
+                
+                if ( (count++) < (limit - 1) ) {
+                    fetchDocument();
+                } else {
+                    callback(null, messages);
+                }
+            }
+        })
+    })();
 };

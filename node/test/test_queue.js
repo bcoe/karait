@@ -69,7 +69,7 @@ exports.tests = {
             });
         });
     },
-    
+
     'should write a dictionary into the mongodb queue collection': function(finished, prefix) {
         new Queue(
             {
@@ -278,6 +278,33 @@ exports.tests = {
                                     finished();
                                 });
                             });
+                        });
+                    });
+                });
+            }
+        );
+    },
+    
+    'should not see a message until the visibility timeout has passed': function(finished, prefix) {
+        new Queue(
+            {
+                database: 'karait_test',
+                queue: 'queue_test',
+                averageMessageSize: 8192,
+                queueSize: 4096
+            },
+            function(err, queue) {
+                queue.write({foo: 'bar'}, function() {
+                    queue.read({visibilityTimeout: 0.1}, function(err, messages) {
+                        equal(1, messages.length, prefix + messages.length + ' not equal to 1');
+                        queue.read(function(err, messages) {
+                            equal(0, messages.length, prefix + messages.length + ' not equal to 0');
+                            setTimeout(function() {
+                                queue.read(function(err, messages) {
+                                    equal(1, messages.length, prefix + messages.length + ' not equal to 1');
+                                    finished();
+                                });
+                            }, 200);
                         });
                     });
                 });

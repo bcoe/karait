@@ -18,7 +18,7 @@ exports.Message.prototype._checkIfExpired = function() {
         currentTime = (new Date()).getTime() / 1000.0,
         timestamp = meta.timestamp || 0.0;
         
-    if (expire == -1.0) {
+    if (expire <= -1.0) {
         return;
     }
     

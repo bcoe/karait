@@ -107,9 +107,7 @@ class Queue(object):
         for raw_message in raw_messages:
             message = Message(dictionary=raw_message, queue_collection=self.queue_collection)
             
-            if message.is_expired():
-                message.delete()
-            else:
+            if not message.is_expired():
                 messages.append(message)
             
         return messages

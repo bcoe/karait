@@ -96,7 +96,7 @@ exports.Queue.prototype.write = function(message, params, callback) {
     }
     
     messageObject._meta = {
-        expire: -1.0,
+        expire: params.expire || -1.0,
         timestamp: (new Date()).getTime() / 1000.0,
         expired: false,
         visible_after: -1.0
@@ -176,7 +176,10 @@ exports.Queue.prototype._normalFind = function(query, limit, callback) {
                    return;
                } else {
                    for (var i = 0, item; (item = items[i]) != null; i++) {
-                       messages.push(new Message(item, _this.queueCollection));
+                       var message = new Message(item, _this.queueCollection);
+                       if (!message.isExpired()) {
+                           messages.push(message);
+                       }
                    }
                    callback(null, messages);
                }

@@ -23,7 +23,8 @@ exports.Message.prototype._checkIfExpired = function() {
     }
     
     if ( (currentTime - timestamp) > expire ) {
-       self._expired = true;
+       this._expired = true;
+       this.delete();
     }
 };
 

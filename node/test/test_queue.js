@@ -201,5 +201,24 @@ exports.tests = {
                 });
             }
         });
+    },
+    
+    'should not return expired messages when read is called': function(finished, prefix) {
+        var queue = new Queue({
+            database: 'karait_test',
+            queue: 'queue_test',
+            averageMessageSize: 8192,
+            queueSize: 4096,
+            onQueueReady: function() {
+                queue.write({foo: 'bar'}, {expire: 0.1}, function() {
+                    setTimeout(function() {
+                        queue.read(function(err, messages) {
+                            equal(0, messages.length, prefix + messages.length + ' not equal to 0');
+                            finished();
+                        });
+                    }, 200);
+                });
+            }
+        });
     }
 };

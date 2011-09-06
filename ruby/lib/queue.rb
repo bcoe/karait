@@ -94,9 +94,7 @@ module Karait
       
       raw_messages.each do |raw_message|
         message = Karait::Message.new(raw_message=raw_message, queue_collection=@queue_collection)
-        if message.expired?
-          message.delete()
-        else
+        if not message.expired?
           messages << message
         end
       end

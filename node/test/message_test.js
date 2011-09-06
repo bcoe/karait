@@ -1,6 +1,6 @@
-var a = require('assert'),
+var equal = require('assert').equal,
     puts = require('sys').puts,
-    Message = require('../lib').Queue,
+    Message = require('../lib').Message,
     mongodb = require('mongodb'),
     Db = mongodb.Db,
     Connection = mongodb.Connection,
@@ -14,8 +14,33 @@ exports.tests = {
                'bar': 10
             }
         });
-        a.equal(99, message.foo, prefix + 'foo not equal to 99');
-        a.equal(10, message.inner_dictionary.bar, prefix + 'bar not equal to 10');
+        equal(99, message.foo, prefix + 'foo not equal to 99');
+        equal(10, message.inner_dictionary.bar, prefix + 'bar not equal to 10');
+        finished();
+    },
+    
+    'should serialize appropriate variables when toObject is called': function(finished, prefix) {
+        
+        var object = {
+            'apple': 7,
+            'banana': 5,
+            'inner_dictionary': {
+                'foo': 2,
+                'bar': 4
+            }
+        };
+        var message = new Message(object);
+        var rawMessage = message.toObject();
+
+        var count = 0;
+        for (var key in rawMessage) {
+            if (rawMessage.hasOwnProperty(key)) {
+                count += 1;
+            }
+        }
+        
+        equal(2, rawMessage.inner_dictionary.foo, prefix + 'foo had wrong value');
+        equal(3, count, prefix + 'wrong number of keys serialized.');
         finished();
     }
 };

@@ -14,10 +14,13 @@ function run(callback, test) {
             callback(
                 function() {
                     puts(test + ' \033[32m[Success]\033[m');
-                    var nextTest = tests.shift();
-                    if (nextTest) {
-                        nextTest();
+                    if (tests.length == 0) {
+                        puts(' \033[32mAll tests finished.\033[m');
+                        process.exit();
                     }
+                    
+                    var nextTest = tests.shift();
+                    nextTest();
                 },
                 test + ': '
             );

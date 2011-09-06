@@ -61,12 +61,14 @@ exports.tests = {
     },
 
     'should remove a message from mongodb when delete is called on it': function(finished, prefix) {
-        var queue = new Queue({
-            database: 'karait_test',
-            queue: 'queue_test',
-            averageMessageSize: 8192,
-            queueSize: 4096,
-            onQueueReady: function() {
+        new Queue(
+            {
+                database: 'karait_test',
+                queue: 'queue_test',
+                averageMessageSize: 8192,
+                queueSize: 4096
+            },
+            function(err, queue) {
                 queue.write({'foo': 'bar'}, {}, function() {
                     queue.read(function(err, messages) {
                         equal(1, messages.length, prefix + 'queue does not have one message');
@@ -79,7 +81,7 @@ exports.tests = {
                     });
                 });
             }
-        });
+        );
     }/*,
     
     'should set a message to expired if current time > than expires time': function(finished, prefix) {

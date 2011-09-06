@@ -8,17 +8,17 @@ var extend = require('./helpers').extend,
     
 var nativeParserError = 'Native bson parser not compiled';
     
-exports.Queue = function(params) {
+exports.Queue = function(params, onQueueReady) {
     var defaults = {
         host: 'localhost',
         port: 27017,
         database: 'karait',
         queue: 'messages',
         averageMessageSize: 8192,
-        queueSize: 4096,
-        onQueueReady: function(err, queue) {}
+        queueSize: 4096
     };
     extend(this, defaults, params);
+    this.onQueueReady = onQueueReady || function() {};
     this._initializeQueue(true);
 };
 

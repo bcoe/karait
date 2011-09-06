@@ -9,12 +9,14 @@ var equal = require('assert').equal,
     
 exports.tests = {
     'should initialize a capped collection when a queue is created': function(finished, prefix) {
-        var queue = new Queue({
-            database: 'karait_test',
-            queue: 'queue_test',
-            averageMessageSize: 8192,
-            queueSize: 4096,
-            onQueueReady: function(err) {
+        new Queue(
+            {
+                database: 'karait_test',
+                queue: 'queue_test',
+                averageMessageSize: 8192,
+                queueSize: 4096
+            },
+            function(err, queue) {
                 queue.queueCollection.options(function(err, options) {
                     equal(true, options.capped, prefix + 'collection not capped');
                     equal(4096, options.max, prefix + 'invalid max queue size');
@@ -23,7 +25,7 @@ exports.tests = {
                     finished();
                 });
             }
-        });
+        );
     },
     
     'should attach to a collection that already exists': function(finished, prefix) {
@@ -47,12 +49,14 @@ exports.tests = {
                     }
                 );
                 
-                var queue = new Queue({
-                    database: 'karait_test',
-                    queue: 'queue_test',
-                    averageMessageSize: 8192,
-                    queueSize: 4096,
-                    onQueueReady: function() {
+                new Queue(
+                    {
+                        database: 'karait_test',
+                        queue: 'queue_test',
+                        averageMessageSize: 8192,
+                        queueSize: 4096
+                    },
+                    function(err, queue) {
                         queue.queueCollection.options(function(err, options) {
                             collection.count({}, function(err, count) {
                                 equal(1, count, prefix + 'count should be 1.');
@@ -60,19 +64,21 @@ exports.tests = {
                             });
                         });
                     }
-                });
+                );
                 
             });
         });
     },
     
     'should write a dictionary into the mongodb queue collection': function(finished, prefix) {
-        var queue = new Queue({
-            database: 'karait_test',
-            queue: 'queue_test',
-            averageMessageSize: 8192,
-            queueSize: 4096,
-            onQueueReady: function() {
+        new Queue(
+            {
+                database: 'karait_test',
+                queue: 'queue_test',
+                averageMessageSize: 8192,
+                queueSize: 4096
+            },
+            function(err, queue) {
                 queue.write(
                     {
                         foo: 'bar'
@@ -91,16 +97,18 @@ exports.tests = {
                     }
                 );
             }
-        });
+        );
     },
     
     'should write a message object into the mongodb queue collection': function(finished, prefix) {
-        var queue = new Queue({
-            database: 'karait_test',
-            queue: 'queue_test',
-            averageMessageSize: 8192,
-            queueSize: 4096,
-            onQueueReady: function() {
+        new Queue(
+            {
+                database: 'karait_test',
+                queue: 'queue_test',
+                averageMessageSize: 8192,
+                queueSize: 4096
+            },
+            function(err, queue) {
                 var message = new Message(
                     {
                         'bar': 'foo'
@@ -128,16 +136,18 @@ exports.tests = {
                     }
                 );
             }
-        });
+        );
     },
     
     'should read a messge object from the mongo queue collection': function(finished, prefix) {
-        var queue = new Queue({
-            database: 'karait_test',
-            queue: 'queue_test',
-            averageMessageSize: 8192,
-            queueSize: 4096,
-            onQueueReady: function() {
+        new Queue(
+            {
+                database: 'karait_test',
+                queue: 'queue_test',
+                averageMessageSize: 8192,
+                queueSize: 4096
+            },
+            function(err, queue) {
                 writeMessage = new Message({
                    foo: 1,
                    bar: 2,
@@ -154,16 +164,18 @@ exports.tests = {
                     });
                 });
             }
-        });
+        );
     },
     
     'should only return messages that match routing key': function(finished, prefix) {
-        var queue = new Queue({
-            database: 'karait_test',
-            queue: 'queue_test',
-            averageMessageSize: 8192,
-            queueSize: 4096,
-            onQueueReady: function() {
+        new Queue(
+            {
+                database: 'karait_test',
+                queue: 'queue_test',
+                averageMessageSize: 8192,
+                queueSize: 4096
+            },
+            function(err, queue) {
                 queue.write({foo: 'bar'}, {routingKey: 'foobar'}, function() {
                     queue.write({bar: 'foo'}, function() {
                         queue.read({routingKey: 'foobar'}, function(err, messages) {
@@ -178,16 +190,18 @@ exports.tests = {
                     });
                 });
             }
-        });
+        );
     },
     
     'should no longer return a message when delete is called on it': function(finished, prefix) {
-        var queue = new Queue({
-            database: 'karait_test',
-            queue: 'queue_test',
-            averageMessageSize: 8192,
-            queueSize: 4096,
-            onQueueReady: function() {
+        new Queue(
+            {
+                database: 'karait_test',
+                queue: 'queue_test',
+                averageMessageSize: 8192,
+                queueSize: 4096
+            },
+            function(err, queue) {
                 queue.write({foo: 'bar'}, function() {
                     queue.read(function(err, messages) {
                         equal(1, messages.length, prefix + messages.length + ' not equal to 1');
@@ -200,16 +214,18 @@ exports.tests = {
                     });
                 });
             }
-        });
+        );
     },
     
     'should not return expired messages when read is called': function(finished, prefix) {
-        var queue = new Queue({
-            database: 'karait_test',
-            queue: 'queue_test',
-            averageMessageSize: 8192,
-            queueSize: 4096,
-            onQueueReady: function() {
+        new Queue(
+            {
+                database: 'karait_test',
+                queue: 'queue_test',
+                averageMessageSize: 8192,
+                queueSize: 4096
+            },
+            function(err, queue) {
                 queue.write({foo: 'bar'}, {expire: 0.1}, function() {
                     setTimeout(function() {
                         queue.read(function(err, messages) {
@@ -219,6 +235,6 @@ exports.tests = {
                     }, 200);
                 });
             }
-        });
+        );
     }
 };

@@ -19,50 +19,73 @@ Usage
 
 _Writing to a queue_
 
-```python
-from karait import Message, Queue
+```javascript
+var puts = require('sys').puts,
+    Queue = require('karait').Queue;
 
-queue = Queue(
-    host='localhost', # MongoDB host. Defaults to localhost.
-    port=27017, # MongoDB port. Defaults to 27017.
-    database='karait', # Database that will store the karait queue. Defaults to karait.
-    queue='messages', # The capped collection that karait writes to. Defaults to messages.
-    average_message_size=8192, # How big do you expect the messages will be in bytes? Defaults to 8192.
-    queue_size=4096 # How many messages should be allowed in the queue. Defaults to 4096.
-)
+puts("Starting javascript writer.")
 
-queue.write({
-	'name': 'Benjamin',
-	'action': 'Rock'
-})
+messagesWritten = 0.0
+startTime = (new Date()).getTime() / 1000.0;
 
-# or
-
-message = Message()
-message.name = 'Benjamin'
-message.action = 'Rock!'
-
-queue.write(message, routing_key='my_routing_key', expire=3.0)
+new Queue(function(err, queue) {
+    if (err) {
+        throw err;
+    }
+    
+    (function writeMessage() {
+        queue.write(
+            {
+                messages_written: messagesWritten,
+                sender: 'writer.js',
+                started_running: startTime,
+                messages_written_per_second: messagesWritten / ( ( (new Date()).getTime() / 1000.0 ) - startTime )
+            },
+            {
+                routingKey: 'for_reader'
+            },
+            function() {
+                writeMessage();
+            }
+        )
+        messagesWritten += 1;
+    })();
+});
 ```
 
 _Reading from a queue_
 
-```python
-from karait import Message, Queue
+```javascript
+var puts = require('sys').puts,
+    Queue = require('karait').Queue;
 
-queue = Queue()
+puts("Starting javascript reader.")
 
-message = queue.read()[0]
-print "%s" % (message.name)
+messagesRead = 0.0
+startTime = (new Date()).getTime() / 1000.0;
 
-message.delete()
-
-# or
-
-message = queue.read(routing_key='my_routing_key')[0]
-print "%s" % (message.action)
-
-message.delete()
+new Queue(function(err, queue) {
+    if (err) {
+        throw err;
+    }
+    
+    (function readMessages() {
+        queue.read({routingKey: 'for_reader'}, function(err, messages) {
+            for (var i = 0, message; (message = messages[i]) != null; i++) {
+                messagesRead += 1;
+                message.messages_read = messagesRead;
+                message.messages_read_per_second = messagesRead / ( ( (new Date()).getTime() / 1000.0 ) - startTime );
+                
+                if (messagesRead % 250 == 0) {
+                    puts(JSON.stringify(message.toObject()));
+                }
+            }
+            queue.deleteMessages(messages, function() {
+                readMessages();
+            });
+        });
+    })();
+});
 ```
 
 See unit tests for more documentation.

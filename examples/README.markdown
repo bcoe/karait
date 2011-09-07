@@ -33,7 +33,7 @@ Visibility Timeout
 Demonstrates the use of the visibility_timeout flag.
 
 * Run a single writer.py.
-* Run multiple reader.rb scripts.
+* Run multiple reader.rb/reader.js scripts.
 * Due to the usage of visibility timeouts, only one reader should see each message.
 
 Copyright

@@ -230,25 +230,19 @@ exports.Queue.prototype._atomicFind = function(query, update, limit, callback) {
         _this = this;
         
    (function fetchDocument() {
-        _this.queueCollection.findAndModify(query, [], update, {safe: true}, function(err, item) {
-            if (err) {
-                callback(err, null);
-                return;
+        _this.queueCollection.findAndModify(query, [], update, {}, function(err, item) {
+            if (item) {
+                var message = new Message(item, _this.queueCollection);
+                
+                if (!message.isExpired()) {
+                    messages.push(message);
+                }
+            }
+            
+            if ( (count++) < (limit - 1) ) {
+                fetchDocument();
             } else {
-                
-                if (item) {
-                    var message = new Message(item, _this.queueCollection);
-                    
-                    if (!message.isExpired()) {
-                        messages.push(message);
-                    }
-                }
-                
-                if ( (count++) < (limit - 1) ) {
-                    fetchDocument();
-                } else {
-                    callback(null, messages);
-                }
+                callback(null, messages);
             }
         })
     })();

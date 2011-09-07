@@ -296,6 +296,7 @@ exports.tests = {
             function(err, queue) {
                 queue.write({foo: 'bar'}, function() {
                     queue.read({visibilityTimeout: 0.1}, function(err, messages) {
+                        equal('bar', messages[0].foo, prefix + messages[0].foo + ' not equal to bar');
                         equal(1, messages.length, prefix + messages.length + ' not equal to 1');
                         queue.read(function(err, messages) {
                             equal(0, messages.length, prefix + messages.length + ' not equal to 0');

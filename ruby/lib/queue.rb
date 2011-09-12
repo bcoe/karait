@@ -73,7 +73,7 @@ module Karait
             
             raw_message = @queue_collection.find_and_modify(:query => query, :update => update)
             
-            if raw_message:
+            if raw_message
               raw_messages << raw_message
             else
               break

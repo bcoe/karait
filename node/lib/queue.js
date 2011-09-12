@@ -4,29 +4,28 @@ var extend = require('./helpers').extend,
     mongodb = require('mongodb'),
     Db = mongodb.Db,
     Connection = mongodb.Connection,
-    Server = mongodb.Server;
+    Server = mongodb.Server,
+    sexy = require('sexy-args');
     
 var nativeParserError = 'Native bson parser not compiled';
 var makeFloat = 0.0000001;
     
-exports.Queue = function(params, onQueueReady) {
-    
-    if (typeof(params) === 'function') {
-        onQueueReady = params;
-        params = {};
-    }
-    
-    var defaults = {
-        host: 'localhost',
-        port: 27017,
-        database: 'karait',
-        queue: 'messages',
-        averageMessageSize: 8192,
-        queueSize: 4096
-    };
-    extend(this, defaults, params);
-    this.onQueueReady = onQueueReady || function() {};
-    this._initializeQueue(true);
+exports.Queue = function(params, options, onQueueReady) {
+    sexy.args(
+        [this, 'object1', ['object2', 'function1'], 'function1'],
+        {'object1': {
+            host: 'localhost',
+            port: 27017,
+            database: 'karait',
+            queue: 'messages',
+            averageMessageSize: 8192,
+            queueSize: 4096
+        }}, function() {
+            extend(this, params);
+            this.onQueueReady = onQueueReady;
+            this._initializeQueue(true);
+        }
+    );
 };
 
 exports.Queue.prototype._initializeQueue = function(nativeParser) {
@@ -115,85 +114,71 @@ exports.Queue.prototype.deleteMessages = function(messages, callback) {
 };
 
 exports.Queue.prototype.write = function(message, params, callback) {
-    
-    if (typeof(params) === 'function') {
-        callback = params;
-        params = {};
-    }
-    
-    callback = callback || function() {};
-    
-    if (message.toObject) {
-        var messageObject = message.toObject();
-    } else {
-        var messageObject = message;
-    }
-    
-    messageObject._meta = {
-        expire: (params.expire || -1) - makeFloat,
-        timestamp: (new Date()).getTime() / 1000.0,
-        expired: false,
-        visible_after: -1 - makeFloat
-    }
-    
-    if (params.routingKey) {
-        messageObject._meta.routing_key = params.routingKey;
-    }
-    
-    this.queueCollection.insert(messageObject, {safe: true}, callback);
+    sexy.args([this, 'object1', ['object2', 'function1'], 'function1'], function() {
+        if (message.toObject) {
+            var messageObject = message.toObject();
+        } else {
+            var messageObject = message;
+        }
+        
+        messageObject._meta = {
+            expire: (params.expire || -1) - makeFloat,
+            timestamp: (new Date()).getTime() / 1000.0,
+            expired: false,
+            visible_after: -1 - makeFloat
+        }
+        
+        if (params.routingKey) {
+            messageObject._meta.routing_key = params.routingKey;
+        }
+        
+        this.queueCollection.insert(messageObject, {safe: true}, callback);
+    });
 };
 
 exports.Queue.prototype.read = function(params, callback) {
-    var _this = this,
-        params = params || {};
+    var _this = this;
     
-    if (typeof(params) === 'function') {
-        callback = params;
-        params = {};
-    }
-    
-    callback = callback || function() {};
-    
-    extend(
-        params,
-        {
+    sexy.args(
+        [this, ['object1', 'function1'], 'function1'],
+        {'object1': {   
             messagesRead: 10,
             visibilityTimeout: -1.0 - makeFloat,
             routingKey: null
-        },
-        params
+        }},
+        function() {
+            var currentTime = (new Date()).getTime() / 1000.0,
+                query = {
+                    '_meta.expired': false,
+                    '_meta.visible_after': {
+                        '$lt': currentTime
+                    }
+                },
+                update = false;
+    
+            if (params.routingKey) {
+                query['_meta.routing_key'] = params.routingKey
+            } else {
+                query['_meta.routing_key'] = {
+                    '$exists': false
+                }
+            }
+    
+            if (params.visibilityTimeout > -1.0) {
+                update = {
+                    '$set': {
+                      '_meta.visible_after': currentTime + params.visibilityTimeout
+                    }
+                }
+            }
+    
+            if (!update) {
+                this._normalFind(query, params.messagesRead, callback);
+            } else {
+                this._atomicFind(query, update, params.messagesRead, callback);
+            }
+        }
     );
-    
-    var currentTime = (new Date()).getTime() / 1000.0,
-        query = {
-            '_meta.expired': false,
-            '_meta.visible_after': {
-                '$lt': currentTime
-            }
-        },
-        update = false;
-    
-    if (params.routingKey) {
-        query['_meta.routing_key'] = params.routingKey
-    } else {
-        query['_meta.routing_key'] = {
-            '$exists': false
-        }
-    }
-    
-    if (params.visibilityTimeout > -1.0) {
-        update = {
-            '$set': {
-              '_meta.visible_after': currentTime + params.visibilityTimeout
-            }
-        }
-    }
-    
-    if (!update) {
-        this._normalFind(query, params.messagesRead, callback);
-    } else {
-        this._atomicFind(query, update, params.messagesRead, callback);
-    }
 };
 
 exports.Queue.prototype._normalFind = function(query, limit, callback) {

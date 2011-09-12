@@ -18,6 +18,9 @@
     "type": "git",
     "url": "git://github.com/bcoe/karait.git"
   },
-  "dependencies": {"mongodb": ">=0.9.3"},
+  "dependencies": {
+    "mongodb": ">=0.9.3",
+    "sexy-args": ">=0.0.1"
+  },
   "devDependencies": {}
 }

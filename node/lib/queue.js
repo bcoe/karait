@@ -10,9 +10,9 @@ var extend = require('./helpers').extend,
 var nativeParserError = 'Native bson parser not compiled';
 var makeFloat = 0.0000001;
     
-exports.Queue = function(params, options, onQueueReady) {
+exports.Queue = function(params, onQueueReady) {
     sexy.args(
-        [this, 'object1', ['object2', 'function1'], 'function1'],
+        [this, ['object1', 'function1'], 'function1'],
         {'object1': {
             host: 'localhost',
             port: 27017,

@@ -1,6 +1,7 @@
 import time
 import pymongo
 from karait.model.message import Message
+import datetime
 
 class Queue(object):
     
@@ -70,7 +71,7 @@ class Queue(object):
                 
         self.queue_collection.insert(message_dict, safe=True)
     
-    def read(self, routing_key=None, messages_read=10, visibility_timeout=-1.0):
+    def read(self, routing_key=None, messages_read=10, visibility_timeout=-1.0, block=False, polling_interval_seconds=1.0, timeout_in_seconds=None ):
         messages = []
         current_time = time.time()
         query = {
@@ -93,8 +94,22 @@ class Queue(object):
                     "_meta.visible_after": current_time + visibility_timeout
                 }
             }
-        
+       	available_query ={
+		'expired': False,
+		'visible_after' : {'$lt' : current_time}
+	} 
         raw_messages=[]
+
+	# if we want to block, loop and sleep until messages are available (or we time out)
+	if block:
+		# as long as there are no messages, block (unless we time out)
+		while self.queue_collection.find(query).count() == 0:
+			# if we have timed out, exit loop
+			if timeout_in_seconds is not None and current_time + timeout_in_seconds <= time.time():
+				break
+			# sleep before polling again
+			time.sleep(polling_interval_seconds)
+
         if update:        
             for i in range(0, messages_read):
                 raw_message = self.queue_collection.find_and_modify(query=query, update=update)

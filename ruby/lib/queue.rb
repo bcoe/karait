@@ -36,7 +36,10 @@ module Karait
       opts = {
         :messages_read => 10,
         :visibility_timeout => -1.0,
-        :routing_key => nil
+        :routing_key => nil,
+        :block => false,
+        :polling_interval_seconds =>10,
+        :timeout_in_seconds=> nil
       }.update(opts)
       
       current_time = Time.new.to_f
@@ -66,7 +69,20 @@ module Karait
       end
       
       raw_messages = []
-      
+      # if we want to block, loop and sleep until messages are available (or we time out)
+      if opts[:block]
+          # as long as there are no message, block (unless we time out)
+          while @queue_collection.find(query).count() ==0
+               # if we have timed out, exit loop
+              if opts[:timeout_in_seconds] != nil and current_time + opts[:timeout_in_seconds] <= time.new.to_f
+                  break
+              end
+              #sleep before polling again
+              sleep opts[:polling_interval_seconds]
+          end
+       end
+
+
       if update
         (0..opts[:messages_read]).each do
           begin

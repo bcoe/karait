@@ -234,4 +234,21 @@ class TestQueue < Test::Unit::TestCase
     messages = queue.read(:visibility_timeout => 0.4)
     assert_equal 3, messages.count
   end
+  
+  should "block on reading from queue until polling timeout reached" do
+    start_time = Time.new.to_f
+    
+    queue = Karait::Queue.new(
+      :database => 'karait_test',
+      :queue => 'queue_test'
+    )
+    
+    queue.read( :block => true, :polling_timeout => 0.1 )
+    queue.write Karait::Message.new({'foo' => 1})
+    messages = queue.read( :block => true, :polling_timeout => 0.1 )
+
+    assert_equal 1, messages.count
+    stop_time = Time.new.to_f
+    assert_equal true, stop_time - start_time > 0.1
+  end
 end

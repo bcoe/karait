@@ -18,3 +18,4 @@ nbproject
 *.pid
 *.log
 build/
+*/dist

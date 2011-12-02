@@ -199,3 +199,14 @@ class TestQueue(unittest.TestCase):
        time.sleep(0.5)
        messages = queue.read()
        self.assertEqual(3, len(messages))
+    
+    def test_a_message_with_a_unique_key_specified_can_only_be_inserted_once_for_a_given_key_value(self):
+       queue = Queue(
+           database='karait_test',
+           queue='queue_test'
+       )
+       queue.write(Message({'foo': 'value1'}), unique_key='foo')
+       queue.write(Message({'foo': 'value1'}), unique_key='foo')
+       queue.write(Message({'foo': 'value2'}), unique_key='foo')
+       messages = queue.read()
+       self.assertEqual(len(messages), 2)

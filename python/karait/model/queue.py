@@ -53,7 +53,7 @@ class Queue(object):
             if not self.ALREADY_EXISTS_EXCEPTION_STRING in str(operation_failure):
                 raise operation_failure
     
-    def write(self, message, routing_key=None, expire=-1.0):
+    def write(self, message, routing_key=None, expire=-1.0, unique_key=None):
         if type(message) == dict:
             message_dict = message
         else:
@@ -67,8 +67,23 @@ class Queue(object):
         
         if routing_key:
             message_dict['_meta']['routing_key'] = routing_key
-                
-        self.queue_collection.insert(message_dict, safe=True)
+        
+        if not unique_key:
+            self.queue_collection.insert(message_dict, safe=True)
+            return True
+        else:
+            return self._unique_insert(message_dict, unique_key)
+    
+    def _unique_insert(self, message_dict, unique_key):
+        return self.queue_database.eval(pymongo.code.Code(
+            "function(obj) { if ( db.%s.count({%s: obj.%s}) ) { return false; } db.%s.insert(obj); return true;}" % (
+                self.queue,
+                unique_key,
+                unique_key,
+                self.queue
+            )
+        ), message_dict)
+        return True
     
     def read(self, routing_key=None, messages_read=10, visibility_timeout=-1.0, block=False, polling_interval=1.0, polling_timeout=None):
         messages = []

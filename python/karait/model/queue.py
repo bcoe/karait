@@ -1,6 +1,7 @@
 import time
 import pymongo
 from karait.model.message import Message
+from pymongo.code import Code
 
 class Queue(object):
     
@@ -75,12 +76,13 @@ class Queue(object):
             return self._unique_insert(message_dict, unique_key)
     
     def _unique_insert(self, message_dict, unique_key):
-        return self.queue_database.eval(pymongo.code.Code(
-            "function(obj) { if ( db.%s.count({%s: obj.%s}) ) { return false; } db.%s.insert(obj); return true;}" % (
-                self.queue,
-                unique_key,
-                unique_key,
-                self.queue
+        return self.queue_database.eval(
+            Code(
+                "function(obj) { if ( db.%s.count({%s: obj.%s}) ) { return false; } db.%s.insert(obj); return true;}" % (
+                    self.queue,
+                    unique_key,
+                    unique_key,
+                    self.queue
             )
         ), message_dict)
         return True

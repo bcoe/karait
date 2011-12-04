@@ -27,9 +27,14 @@ module Karait
         :visible_after => -1.0
       }
       
-      message_dict[:_meta][:routing_key] = opts.fetch(:routing_key) if opts[:routing_key]
+      message_dict[:_meta][:routing_key] = opts[:routing_key] if opts[:routing_key]
       
-      @queue_collection.insert(message_dict, :safe => true)
+      if opts[:unique_key]
+        unique_insert(message_dict, opts[:unique_key])
+      else
+        @queue_collection.insert(message_dict, :safe => true)
+      end
+      
     end
     
     def read(opts={})
@@ -130,6 +135,13 @@ module Karait
     end
     
     private
+
+    def unique_insert(message_dict, unique_key)
+      return @database.eval(
+        "function(obj) { if ( db.#{@queue}.count({#{unique_key}: obj.#{unique_key}}) ) { return false; } db.#{@queue}.insert(obj); return true;}",
+        message_dict
+      )
+    end
     
     def block_until_message_available(query, polling_interval=1.0, polling_timeout=None)
         current_time = Time.new.to_f

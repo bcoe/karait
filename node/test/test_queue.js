@@ -311,5 +311,28 @@ exports.tests = {
                 });
             }
         );
+    },
+
+    'should not insert two documents with the same value for a unique key': function(finished, prefix) {
+        new Queue(
+            {
+                database: 'karait_test',
+                queue: 'queue_test',
+                averageMessageSize: 8192,
+                queueSize: 4096
+            },
+            function(err, queue) {
+                queue.write({foo: 'value1'}, {uniqueKey: 'foo'}, function() {
+                    queue.write({foo: 'value1'}, {uniqueKey: 'foo'}, function() {
+                        queue.write({foo: 'value2'}, {uniqueKey: 'foo'}, function() {
+                            queue.read(function(err, messages) {
+                                equal(2, messages.length, prefix + 'value1 written twice');
+                                finished();
+                            });
+                        });
+                    });
+                });
+            }
+        );
     }
 };

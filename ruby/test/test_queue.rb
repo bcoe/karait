@@ -251,4 +251,19 @@ class TestQueue < Test::Unit::TestCase
     stop_time = Time.new.to_f
     assert_equal true, stop_time - start_time > 0.1
   end
+
+  should "should not insert two documents with the same value for a unique key" do
+    queue = Karait::Queue.new(
+      :database => 'karait_test',
+      :queue => 'queue_test'
+    )
+
+    queue.write Karait::Message.new({'foo' => 'value1'}), :unique_key => 'foo'
+    queue.write Karait::Message.new({'foo' => 'value1'}), :unique_key => 'foo'
+    queue.write Karait::Message.new({'foo' => 'value2'}), :unique_key => 'foo'
+
+    messages = queue.read()
+
+    assert_equal 2, messages.count
+  end
 end

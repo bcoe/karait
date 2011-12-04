@@ -85,7 +85,6 @@ class Queue(object):
                     self.queue
             )
         ), message_dict)
-        return True
     
     def read(self, routing_key=None, messages_read=10, visibility_timeout=-1.0, block=False, polling_interval=1.0, polling_timeout=None):
         messages = []

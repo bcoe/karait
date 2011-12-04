@@ -132,8 +132,20 @@ exports.Queue.prototype.write = function(message, params, callback) {
             messageObject._meta.routing_key = params.routingKey;
         }
         
-        this.queueCollection.insert(messageObject, {safe: true}, callback);
+        if (params.uniqueKey) {
+            this._uniqueInsert(messageObject, params.uniqueKey, callback);
+        } else {
+            this.queueCollection.insert(messageObject, {safe: true}, callback);
+        }
     });
+};
+
+exports.Queue.prototype._uniqueInsert = function(messageObject, uniqueKey, callback) {
+    this.db.eval(
+        "function(obj) { if ( db." + this.queue + ".count({" + uniqueKey + ": obj." + uniqueKey + "}) ) { return false; } db." + this.queue + ".insert(obj); return true;}",
+        messageObject,
+        callback
+    )
 };
 
 exports.Queue.prototype.read = function(params, callback) {
